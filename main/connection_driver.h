@@ -24,7 +24,7 @@
 #include "driver/gpio.h"
 #include "driver/spi_master.h"
 #include "esp_eth.h"
-
+#include "esp_mac.h"
 
 #include "lwip/err.h"
 #include "lwip/sys.h"
@@ -54,12 +54,14 @@ void wifi_init_sta(uint8_t flag);
 void eth_init_enc28j60(uint8_t flag);
 void parse_ip(char *str,uint8_t *arr);
 void check_con(void);
+
+
 //void connection_mode(void);
 /***********************SOFT AP WIFI**********************/
-#define MY_AP_WIFI_SSID      "myssid"
-#define MY_AP_WIFI_PASS      "mypassword"
-#define MY_AP_WIFI_CHANNEL   1
-#define MY_AP_STA_CONN       4
+#define EXAMPLE_ESP_WIFI_SSID      "Hexabiz_wifi"
+#define EXAMPLE_ESP_WIFI_PASS      "Hexabiz_wifi"
+#define EXAMPLE_ESP_WIFI_CHANNEL   1
+#define EXAMPLE_MAX_STA_CONN       4
 
 /******************************************************/
 
