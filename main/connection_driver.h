@@ -50,7 +50,7 @@ typedef enum
 
 void startConnectionInit(connection_mode_type_t setMode,uint8_t flag);
 void wifi_init_softap(void);
-void wifi_init_sta(uint8_t flag);
+void wifi_init_sta(void);
 void eth_init_enc28j60(uint8_t flag);
 void parse_ip(char *str,uint8_t *arr);
 void check_con(void);
@@ -69,8 +69,11 @@ void check_con(void);
 
 //	Interface_Info.NetworkName = _NetworkName->valuestring;
 //	Interface_Info.NetworkPassword = _NetworkPassword->valuestring;
-
-
+#define EXAMPLE_ESP_MAXIMUM_RETRY  5
+#define ESP_WIFI_SAE_MODE WPA3_SAE_PWE_BOTH
+#define EXAMPLE_H2E_IDENTIFIER ""
+#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_PSK
+#define ESP_WIFI_SCAN_AUTH_MODE_THRESHOLD WIFI_AUTH_WPA2_PSK
 #define MY_STATION_WIFI_SSID      /*"kaadan"*/"abdo"/*"Hexabitz_interns"*//*"Hexabitz_interns"*//*"karim"*/
 #define MY_STATION_WIFI_PASS      /*"qwer1234@"*/"mnmu12345"/*"HexaSTM32f091rc"*//*"sly.man123123123"*/
 #define MY_STATION_MAXIMUM_RETRY  10

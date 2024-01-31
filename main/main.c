@@ -1366,11 +1366,12 @@ app_main(void)
     ESP_ERROR_CHECK(ret);
     ESP_ERROR_CHECK(esp_netif_init());
     // Create default event loop that running in background
-    ESP_ERROR_CHECK(esp_event_loop_create_default());
-
+//    ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     ble_uart_init();
     spi_init();
+
+
     // Set up interrupt handler for SPI receive events
 //       spi_isr_register(spi_slave_receive_handler, NULL, 0, NULL, 0);
 //    /* adding  */
@@ -1387,11 +1388,12 @@ app_main(void)
 //            ESP_LOGE(tag, "Failed to init nimble %d ", ret);
 //            return;
 //        }
-
-	parseData(ssid, password, 2);
-				    ESP_LOGI(tag, "password : %s",password/*wifi_settings.password*/);
+//
+//	parseData(ssid, password, 2);
+//				    ESP_LOGI(tag, "password : %s",password/*wifi_settings.password*/);
 //				    if(pDataReciveedUart[1] == WiFi_AP_MODE)
-				    	startConnectionInit(WiFi_AP_MODE,0);
+//    wifi_init_softap();
+//				    	startConnectionInit(WiFi_STATION_MODE,0);
 //				    else if(pDataReciveedUart[1] == WiFi_STATION_MODE)
 //				    	 startConnectionInit(WiFi_STATION_MODE,0);
 
