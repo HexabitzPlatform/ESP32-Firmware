@@ -30,6 +30,9 @@
 
 /*** Maximum number of characteristics with the notify flag ***/
 #define MAX_NOTIFY 5
+#define INDEX  50
+uint8_t BleBuffer[INDEX]={0};
+
 
 static const ble_uuid128_t gatt_svr_svc_uuid =
     BLE_UUID128_INIT(0x2d, 0x71, 0xa2, 0x59, 0xb4, 0x58, 0xc8, 0x12,
@@ -126,6 +129,7 @@ gatt_svr_write(struct os_mbuf *om, uint16_t min_len, uint16_t max_len,
  *     Append the value to ctxt->om if the operation is READ
  *     Write ctxt->om to the value if the operation is WRITE
  **/
+
 static int
 gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
                 struct ble_gatt_access_ctxt *ctxt, void *arg)
@@ -144,10 +148,11 @@ gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
         }
         uuid = ctxt->chr->uuid;
         if (attr_handle == gatt_svr_chr_val_handle) {
-            rc = os_mbuf_append(ctxt->om,
-                                &gatt_svr_chr_val,
-                                sizeof(gatt_svr_chr_val));
-//            ESP_LOGI("wwwwwwwwwwww", "ESP_WIFI_MODE_AP %d" ,gatt_svr_chr_val);
+//            rc = os_mbuf_append(ctxt->om,
+//                                &gatt_svr_chr_val,
+//                                sizeof(gatt_svr_chr_val));
+           rc= os_mbuf_append(ctxt->om, BleBuffer,strlen((const char *)BleBuffer));
+
             return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
         }
         goto unknown;
@@ -162,11 +167,14 @@ gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
         }
         uuid = ctxt->chr->uuid;
         if (attr_handle == gatt_svr_chr_val_handle) {
-            rc = gatt_svr_write(ctxt->om,
-                                sizeof(gatt_svr_chr_val),
-                                sizeof(gatt_svr_chr_val),
-                                &gatt_svr_chr_val, NULL);
-            ESP_LOGI("wwwwwwwwwwww", "ESP_WIFI_MODE_AP %d" ,gatt_svr_chr_val);
+            rc = gatt_svr_write(ctxt->om,0,sizeof(BleBuffer),BleBuffer, 0);
+
+         for (int i = 0; i <INDEX; i++)
+              {
+                  ESP_LOGI("BleBuffer", "datarecved: %d , length recived BLE=%d" , BleBuffer[i], INDEX);
+              }
+//         memset(BleBuffer, 0, sizeof(BleBuffer));
+
             ble_gatts_chr_updated(attr_handle);
             MODLOG_DFLT(INFO, "Notification/Indication scheduled for "
                         "all subscribed peers.\n");
