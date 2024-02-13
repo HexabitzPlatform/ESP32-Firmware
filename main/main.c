@@ -66,7 +66,7 @@ const char *tag = "NimBLE_BLE_CENT";
 QueueHandle_t spp_common_uart_queue = NULL;
 uint16_t numberOfByteToUart;
 uint16_t conn_handle;
-uint8_t flag;
+uint8_t flag=0;
 char recbuf[129]={0};
 uint8_t choose = 0;
 char serverName[50];
@@ -86,6 +86,7 @@ char tranbuf[129]={0};
 char dummy[129]={0};
 spi_slave_transaction_t t;
 uint16_t read_handle;
+int flagg=0;
 //uint16_t ble_svc_gatt_read_val_handle, ble_spp_svc_gatt_read_val_handle, ble_spp_svc_gatt_write_val_handle;
 static int bleprph_gap_event(struct ble_gap_event *event, void *arg);
 static void bleprph_print_conn_desc(struct ble_gap_conn_desc *desc);
@@ -206,28 +207,7 @@ void send_receive_data(char *send,char *rec)
 	t.tx_buffer=send;
 	spi_slave_transmit(SPI2_HOST, &t, /*1000*/portMAX_DELAY);
 }
-int write_data(char *data)
-{
-	const struct peer *peer;
-	const struct peer_chr *chr;
-	int rc;
-	 peer = peer_find(conn_handle);
-	    chr = peer_chr_find_uuid(peer,
-	    		service1,
-				char2);
-	    if (chr == NULL) {
-	        MODLOG_DFLT(ERROR, "Error: Peer doesn't have the subscribable characteristic\n");
-	        return 1;
-	    }
-	rc = ble_gattc_write_flat(conn_handle, chr->chr.val_handle,
-			data/*value*/, strlen(data)/*6*/, NULL/*blecent_on_custom_write*/, NULL);
-	if (rc != 0) {
-		MODLOG_DFLT(ERROR,
-					"Error: Failed to write to the subscribable characteristic; "
-					"rc=%d\n", rc);
-	}
-	return 0;
-}
+
 
 int read_data()
 {
@@ -473,6 +453,7 @@ bleprph_gap_event(struct ble_gap_event *event, void *arg)
             rc = ble_gap_conn_find(event->connect.conn_handle, &desc);
             assert(rc == 0);
             bleprph_print_conn_desc(&desc);
+            conn_handle = event->connect.conn_handle;
         }
         MODLOG_DFLT(INFO, "\n");
 
@@ -816,12 +797,85 @@ err:
  * Application Callback. Called when the custom subscribable characteristic
  * is subscribed to.
  **/
+uint16_t dd;
+int write_data(char *data)
+{
+    const struct peer_chr *chr;
+//	   const struct peer_dsc *dsc;
+	   const struct peer_chr *dsc;
+	          uint8_t value[5];
+	          int rc;
+	          const struct peer *peer ;
+//			  = peer_find(conn_handle);
+	          vTaskDelay(100);
+	        	          ESP_LOGI("eeeeeeeeeee","eeeeeeeee %d",1);
+	        	     	 peer = peer_find(dd);
+	        	     	ESP_LOGI("eeeeeeeeeee","eeeeeeeee %d",2);
+//	        	     	   dsc = peer_dsc_find_uuid(peer,
+//	        	     	                             BLE_UUID16_DECLARE(BLECENT_SVC_ALERT_UUID),
+//	        	     	                             BLE_UUID16_DECLARE(BLECENT_CHR_UNR_ALERT_STAT_UUID),
+//	        	     	                             BLE_UUID16_DECLARE(BLE_GATT_DSC_CLT_CFG_UUID16));
+//
+//	        	     	dsc = peer_chr_find_uuid(peer,
+//	        	     	    		service1,
+//	        	     				char2);
+
+	        	     	 chr = peer_chr_find_uuid(peer,
+	        	     	                             remote_svc_uuid,
+	        	     	                             remote_chr_uuid);
+	          ESP_LOGI("eeeeeeeeeee","eeeeeeeee %d",3);
+	          if (chr == NULL) {
+	              MODLOG_DFLT(ERROR, "Error: Peer lacks a CCCD for the Unread Alert "
+	                          "Status characteristic\n");
+	//              goto err;
+	          }
+
+	          value[0] = 1;
+	          value[1] = 10;
+	          value[2] = 5;
+	          value[3] = 7;
+	          value[4] = 180;
+	          rc = ble_gattc_write_flat(dd, chr->chr.val_handle,
+	                                       value, sizeof(value), blecent_on_custom_write, NULL);
+	          if (rc != 0) {
+	              MODLOG_DFLT(ERROR, "Error: Failed to subscribe to characteristic; "
+	                          "rc=%d\n", rc);
+	//              goto err;
+	          }
+
+//	uint8_t ww[2];
+//	const struct peer *peer;
+//	const struct peer_chr *chr;
+//	int rc;
+//    peer = peer_find(conn_handle);
+//    chr = peer_chr_find_uuid(peer,
+//                             remote_svc_uuid,
+//                             remote_chr_uuid);
+//	    if (chr == NULL) {
+//	        MODLOG_DFLT(ERROR, "Error: Peer doesn't have the subscribable characteristic\n");
+//	        return 1;
+//	    }
+//	    ww[0]=1;
+//	    ww[1]=2;
+//	        rc = ble_gattc_write_flat(conn_handle, chr->chr.val_handle,
+//	                                  ww, sizeof(ww), blecent_on_custom_write, NULL);
+////
+////	rc = ble_gattc_write_flat(conn_handle, chr->chr.val_handle,
+////			data/*value*/, strlen(data)/*6*/, NULL/*blecent_on_custom_write*/, NULL);
+//	if (rc != 0) {
+//		MODLOG_DFLT(ERROR,
+//					"Error: Failed to write to the subscribable characteristic; "
+//					"rc=%d\n", rc);
+//	}
+	return 0;
+}
 static int
 blecent_on_custom_subscribe(uint16_t conn_handle,
                             const struct ble_gatt_error *error,
                             struct ble_gatt_attr *attr,
                             void *arg)
 {
+//	char rr[3]={"gfd"};
     const struct peer_chr *chr;
     uint8_t value;
     int rc;
@@ -848,6 +902,7 @@ blecent_on_custom_subscribe(uint16_t conn_handle,
 
     /* Write 1 byte to the new characteristic to test if it notifies after subscribing */
     value = 0x19;
+//    write_data(rr);
     rc = ble_gattc_write_flat(conn_handle, chr->chr.val_handle,
                               &value, sizeof(value), blecent_on_custom_write, NULL);
     if (rc != 0) {
@@ -856,11 +911,13 @@ blecent_on_custom_subscribe(uint16_t conn_handle,
                     "rc=%d\n", rc);
         goto err;
     }
-
+  flagg=1;
     return 0;
+
 err:
     /* Terminate the connection */
     return ble_gap_terminate(peer->conn_handle, BLE_ERR_REM_USER_CONN_TERM);
+
 }
 
 /**
@@ -885,7 +942,7 @@ blecent_custom_gatt_operations(const struct peer* peer)
         goto err;
     }
 
-    /*** Write 0x00 and 0x01 (The subscription code) to the CCCD ***/
+    /*** Write 0x00 and 0x01 (The subscription code) to the  CCCD ***/
     value[0] = 1;
     value[1] = 0;
     rc = ble_gattc_write_flat(peer->conn_handle, dsc->dsc.handle,
@@ -952,11 +1009,12 @@ blecent_on_write(uint16_t conn_handle,
     uint8_t value[2];
     int rc;
     const struct peer *peer = peer_find(conn_handle);
-
+dd=conn_handle;
     dsc = peer_dsc_find_uuid(peer,
                              BLE_UUID16_DECLARE(BLECENT_SVC_ALERT_UUID),
                              BLE_UUID16_DECLARE(BLECENT_CHR_UNR_ALERT_STAT_UUID),
                              BLE_UUID16_DECLARE(BLE_GATT_DSC_CLT_CFG_UUID16));
+
     if (dsc == NULL) {
         MODLOG_DFLT(ERROR, "Error: Peer lacks a CCCD for the Unread Alert "
                     "Status characteristic\n");
@@ -1602,6 +1660,7 @@ void ble_server_uart_task(void *pvParameters)
     ESP_LOGI(tag, "BLE server UART_task started\n");
     uart_event_t event;
     int rc = 0;
+
 //    uint8_t pDataReciveedUart[512] = {0};
 
     for (;;)
@@ -1821,26 +1880,40 @@ app_main(void)
     ble_uart_init();
     spi_init();
     nimble_port_init();
-    ble_hs_cfg.reset_cb = blecent_on_reset;
-       ble_hs_cfg.sync_cb = blecent_on_sync;
-       ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
+//    ble_hs_cfg.reset_cb = blecent_on_reset;
+//       ble_hs_cfg.sync_cb = blecent_on_sync;
+//       ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
+//
+//       /* Initialize data structures to track connected peers. */
+//       rc = peer_init(MYNEWT_VAL(BLE_MAX_CONNECTIONS), 64, 64, 64);
+//       assert(rc == 0);
+//
+//       /* Set the default device name. */
+//       rc = ble_svc_gap_device_name_set("nimble-blecent");
+//       assert(rc == 0);
+//
+//       /* XXX Need to have template for store */
+//       ble_store_config_init();
+//
+//       nimble_port_freertos_init(blecent_host_task);
+//
+//   #if CONFIG_EXAMPLE_INIT_DEINIT_LOOP
+//       stack_init_deinit();
+//   #endif
+//
+//while(1)
+//{
+//	vTaskDelay(100);
+//ESP_LOGI("ssssssss","flagg %d", flagg);
+//
+//vTaskDelay(100);
+//
+//if (flagg==1)
+//{ESP_LOGI("ddddddddd","flagg %d", flagg);
+//	write_data(1);
+//}
+//}
 
-       /* Initialize data structures to track connected peers. */
-       rc = peer_init(MYNEWT_VAL(BLE_MAX_CONNECTIONS), 64, 64, 64);
-       assert(rc == 0);
-
-       /* Set the default device name. */
-       rc = ble_svc_gap_device_name_set("nimble-blecent");
-       assert(rc == 0);
-
-       /* XXX Need to have template for store */
-       ble_store_config_init();
-
-       nimble_port_freertos_init(blecent_host_task);
-
-   #if CONFIG_EXAMPLE_INIT_DEINIT_LOOP
-       stack_init_deinit();
-   #endif
     /* Configure the host. */
 
 	    /* Initialize the NimBLE host configuration. */

@@ -32,6 +32,23 @@
 #define MAX_NOTIFY 5
 #define INDEX  50
 uint8_t BleBuffer[INDEX]={0};
+uint16_t ble_svc_gatt_read_val_handle, ble_spp_svc_gatt_read_val_handle, ble_spp_svc_gatt_write_val_handle;
+extern const char *master_tag;
+extern char recvbuf[129];
+extern char tranbuf[129];
+extern uint16_t numberOfByteToUart;
+ble_uuid128_t service1 =
+    {
+        .u.type = BLE_UUID_TYPE_128,
+        .value = {0x90, 0x89, 0x81, 0x40, 0xec, 0xc4, 0x96, 0xb7, 0xed, 0x45, 0x63, 0xcc, 0x1d, 0x46, 0xdb, 0xf9}};
+ble_uuid128_t char1 =
+    {
+        .u.type = BLE_UUID_TYPE_128,
+        .value = {0x79, 0x24, 0x39, 0xf7, 0x54, 0xe5, 0xce, 0x8a, 0x44, 0x4a, 0xf6, 0xe0, 0xf3, 0x90, 0x22, 0x97}};
+ble_uuid128_t char2 =
+    {
+        .u.type = BLE_UUID_TYPE_128,
+        .value = {0xe2, 0xa2, 0xe5, 0x9c, 0x72, 0x24, 0xa7, 0x99, 0xc6, 0x46, 0x50, 0x69, 0x11, 0x65, 0xa7, 0xb8}};
 
 
 static const ble_uuid128_t gatt_svr_svc_uuid =
@@ -55,9 +72,113 @@ static int
 gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
                 struct ble_gatt_access_ctxt *ctxt,
                 void *arg);
+/* add from server */
+static int ble_svc_gatt_handler(uint16_t conn_handle, uint16_t attr_handle, struct ble_gatt_access_ctxt *ctxt, void *arg)
+{
+//	struct os_mbuf *om;
+//	memcpy(recvbuf,0,strlen(recvbuf));
+    switch (ctxt->op)
+    {
+    /*don't enter to BLE_GATT_ACCESS_OP_READ_CHR*/
+    case BLE_GATT_ACCESS_OP_READ_CHR:
+//        ESP_LOGI(tag, "Callback for read");
+//    	ESP_LOGI(master_tag, "Data received in write event,conn_handle = %x,attr_handle = %x", conn_handle, attr_handle);
+//        struct os_mbuf *txom;
+//        txom = ble_hs_mbuf_from_flat(recvbuf, strlen(recvbuf));
+//        txom = ble_hs_mbuf_from_flat(&num, sizeof(num));
+//        memset(recvbuf, 0, sizeof(recvbuf));
 
+        /********************************************************/
+//        int rc = ble_gattc_notify_custom(conn_handle, ble_spp_svc_gatt_read_val_handle, txom);
+//        if (rc == 0)
+//        {
+//            ESP_LOGI(master_tag, "Notification sent successfully");
+//            ESP_LOGI(master_tag,"Received: %s\n", recvbuf);
+//        }
+//        else
+//        {
+//            ESP_LOGI(master_tag, "Error in sending notification");
+//        }
+//        os_mbuf_append(ctxt->om, pDataTransmitUart,
+//                                        sizeof(pDataTransmitUart));
+//        om = ble_hs_mbuf_from_flat(pDataTransmitUart, 10);
+//
+//        /*send data available in pDataTransmitUart which I already received by SPI from STM32
+//         *
+//         */
+////        int rc = os_mbuf_append(ctxt->om, pDataTransmitUart, 10);
+//        struct os_mbuf *txom;
+//        txom = ble_hs_mbuf_from_flat(pDataReciveedUart, len);
+//        memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
+//
+//        /********************************************************/
+//        rc = ble_gattc_notify_custom(connection_handle, ble_spp_svc_gatt_read_val_handle, txom);
+//        if (rc == 0)
+//        {
+//            ESP_LOGI(tag, "Notification sent successfully");
+//        }
+//        else
+//        {
+//            ESP_LOGI(tag, "Error in sending notification");
+//        }
+
+        break;
+
+    case BLE_GATT_ACCESS_OP_WRITE_CHR:
+        ESP_LOGI(master_tag, "Data received in write event,conn_handle = %x,attr_handle = %x", conn_handle, attr_handle);
+        /***************************************/
+        ble_hs_mbuf_to_flat(ctxt->om, tranbuf/*pDataTransmitUart*/, ctxt->om->om_len/*10*/, &numberOfByteToUart);
+        ESP_LOGI(master_tag,"tranbuf = %s",tranbuf);
+        uint8_t rc = 1;
+        uart_write_bytes(0, &rc, 1);
+        /*send data by SPI to STM32
+
+        */
+
+
+//        uint8_t len = uart_write_bytes(UART_PORT_x, (const char *)pDataTransmitUart, (size_t)numberOfByteToUart);
+//
+//        for (int i = 0; i < numberOfByteToUart; i++)
+//        {
+//            ESP_LOGI(tag, "datarecved: %d , length recived BLE=%d ,length transmit UART", pDataTransmitUart[i], numberOfByteToUart, len);
+//        }
+//        memset(pDataTransmitUart, 0, sizeof(pDataTransmitUart));
+
+        /***************************************/
+        break;
+
+    default:
+        ESP_LOGI(master_tag, "\nDefault Callback");
+        break;
+    }
+    return 0;
+}
 static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
     {
+    		  /*** Service: SPP */
+    		        .type = BLE_GATT_SVC_TYPE_PRIMARY,
+    		        .uuid = (ble_uuid_t *)(&service1),
+    		        .characteristics = (struct ble_gatt_chr_def[]){{
+    		                                                           /* Support SPP service */
+    		                                                           // .uuid = BLE_UUID128_DECLARE(BLE_SVC_SPP_CHR_UUID128),
+    		                                                           .uuid = (ble_uuid_t *)(&char1),
+    		                                                           .access_cb = ble_svc_gatt_handler,
+    		                                                           .val_handle = &ble_spp_svc_gatt_read_val_handle,
+    		                                                           .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_NOTIFY,
+    		                                                       },
+    		                                                       {
+    		                                                           /* Support SPP service */
+    		                                                           // .uuid = BLE_UUID128_DECLARE(BLE_SVC_SPP_CHR_UUID128),
+    		                                                           .uuid = (ble_uuid_t *)(&char2),
+    		                                                           .access_cb = ble_svc_gatt_handler,
+    		                                                           .val_handle = &ble_spp_svc_gatt_write_val_handle,
+    		                                                           .flags = BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_READ,
+    		                                                       },
+    		                                                       {
+    		                                                           0, /* No more characteristics */
+    		                                                       }},
+
+
         /*** Service ***/
         .type = BLE_GATT_SVC_TYPE_PRIMARY,
         .uuid = &gatt_svr_svc_uuid.u,
