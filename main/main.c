@@ -46,7 +46,12 @@
 #define UART_PORT_x UART_NUM_0
 #define UART_TX_PIN_ST GPIO_NUM_19
 #define UART_RX_PIN_ST GPIO_NUM_18
+#define EX_UART_NUM UART_NUM_0
+#define PATTERN_CHR_NUM    (3)         /*!< Set the number of consecutive and identical characters received by receiver which defines a UART pattern*/
 
+#define BUF_SIZE (1024)
+#define RD_BUF_SIZE (BUF_SIZE)
+static QueueHandle_t uart0_queue;
 /* SPI pins */
 #define GPIO_MOSI 7
 #define GPIO_MISO 6
@@ -98,7 +103,7 @@ void send_receive_data(char *send,char *rec);
 int write_data(char *data);
 int read_data();
 static void ble_uart_init(void);
-void ble_server_uart_task(void *pvParameters);
+void uart_event_task(void *pvParameters);
 /*end*/
 extern uint16_t ble_spp_svc_gatt_read_val_handle;
 /*-------------------------------------------------------------server functions---------------------------------------------*/
@@ -135,22 +140,34 @@ void parseData(char *str1, char *str2, uint8_t numofstr)
 
 static void ble_uart_init(void)
 {
-    uart_config_t uart_config = {
-        .baud_rate = 115200,
-        .data_bits = UART_DATA_8_BITS,
-        .parity = UART_PARITY_DISABLE,
-        .stop_bits = UART_STOP_BITS_1,
-        .flow_ctrl = UART_HW_FLOWCTRL_RTS,
-        .rx_flow_ctrl_thresh = 122,
-        .source_clk = UART_SCLK_APB,
-    };
-    // Install UART driver, and get the queue.
-    uart_driver_install(UART_PORT_x, 4096, 8192, 10, &spp_common_uart_queue, 0);
-    // Set UART parameters
-    uart_param_config(UART_PORT_x, &uart_config);
-    // Set UART pins
-    uart_set_pin(UART_PORT_x, UART_TX_PIN_ST, UART_RX_PIN_ST, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
-    xTaskCreate(ble_server_uart_task, "uTask", 4096, (void *)UART_PORT_x, 8, NULL);
+ esp_log_level_set("uart_events", ESP_LOG_INFO);
+
+/* Configure parameters of an UART driver,
+ * communication pins and install the driver */
+uart_config_t uart_config = {
+    .baud_rate = 115200,
+    .data_bits = UART_DATA_8_BITS,
+    .parity = UART_PARITY_DISABLE,
+    .stop_bits = UART_STOP_BITS_1,
+    .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+    .source_clk = UART_SCLK_DEFAULT,
+};
+//Install UART driver, and get the queue.
+uart_driver_install(EX_UART_NUM, BUF_SIZE * 2, BUF_SIZE * 2, 20, &uart0_queue, 0);
+uart_param_config(EX_UART_NUM, &uart_config);
+
+//Set UART log level
+esp_log_level_set("uart_events", ESP_LOG_INFO);
+//Set UART pins (using UART0 default pins ie no changes.)
+uart_set_pin(EX_UART_NUM, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE);
+
+//Set uart pattern detect function.
+uart_enable_pattern_det_baud_intr(EX_UART_NUM, '+', PATTERN_CHR_NUM, 9, 0, 0);
+//Reset the pattern queue length to record at most 20 pattern positions.
+uart_pattern_queue_reset(EX_UART_NUM, 20);
+
+//Create a task to handler UART event from ISR
+xTaskCreate(uart_event_task, "uart_event_task", 2048, NULL, 12, NULL);
 }
 
 
@@ -1655,21 +1672,24 @@ static void stack_init_deinit(void)
 }
 #endif
 
-void ble_server_uart_task(void *pvParameters)
+void uart_event_task(void *pvParameters)
 {
-    ESP_LOGI(tag, "BLE server UART_task started\n");
     uart_event_t event;
+    size_t buffered_size;
+    uint8_t* dtmp = (uint8_t*) malloc(RD_BUF_SIZE);
     int rc = 0;
 
 //    uint8_t pDataReciveedUart[512] = {0};
 
     for (;;)
     {
+//    	ESP_LOGI(tag, "eeeeeeeeeeeeeeeeeeeeee");
         // Waiting for UART event.
-        if (xQueueReceive(spp_common_uart_queue, (void *)&event, (TickType_t)portMAX_DELAY))
-        {
-            switch (event.type)
-            {
+    	  if(xQueueReceive(uart0_queue, (void * )&event, (TickType_t)portMAX_DELAY)) {
+    	            bzero(dtmp, RD_BUF_SIZE);
+    	            ESP_LOGI("uart_events", "uart[%d] event:", EX_UART_NUM);
+    	            switch(event.type) {
+
             // Event of UART receving data
             case UART_DATA:
             	/*START HERE*/
@@ -1678,7 +1698,9 @@ void ble_server_uart_task(void *pvParameters)
                     ESP_LOGI(tag, "size : %d",event.size);
                     ESP_LOGI(tag, "pDataReciveedUart = %d",pDataReciveedUart[0]);
                     ESP_LOGI(tag, "pDataReciveedUart = %d",pDataReciveedUart[1]);
+                    uart_write_bytes(EX_UART_NUM, (const char*) pDataReciveedUart, event.size);
                     /* ble as client */
+
                     if(pDataReciveedUart[0] == 1)
                     {
 //                    	parseData(server_name, clent_name, 2);
@@ -1812,30 +1834,28 @@ void ble_server_uart_task(void *pvParameters)
                     /* set wifi */
                     else if(pDataReciveedUart[0] == 7)
                     {
-
-//                    int i=0;
-//
-//                    for(; i<pDataReciveedUart[2] ; i++)
-//                    {
-//                    	ssid/*wifi_settings.ssid*/[i] = pDataReciveedUart[i+3];
-//                    }
-//
-//                    ESP_LOGI(tag, "ssid : %s",ssid/*wifi_settings.ssid*/);
-//
-//                    int passSize = pDataReciveedUart[i+3];
-//                    i+=4;
-//
-//                    for(int j=0; j<passSize ; j++)
-//				    {
-//                    	password/*wifi_settings.password*/[j] = pDataReciveedUart[i++];
-//				    }
-                    	parseData(ssid, password, 2);
-				    ESP_LOGI(tag, "password : %s",password/*wifi_settings.password*/);
-				    if(pDataReciveedUart[1] == WiFi_AP_MODE)
-				    	startConnectionInit(WiFi_AP_MODE,0);
-				    else if(pDataReciveedUart[1] == WiFi_STATION_MODE)
-				    	 startConnectionInit(WiFi_STATION_MODE,0);
-                }
+                    	//                    int i=0;
+                    	//
+                    	//                    for(; i<pDataReciveedUart[2] ; i++)
+                    	//                    {
+                    	//                    	ssid/*wifi_settings.ssid*/[i] = pDataReciveedUart[i+3];
+                    	//                    }
+                    	//
+                    	//                    ESP_LOGI(tag, "ssid : %s",ssid/*wifi_settings.ssid*/);
+                    	//
+                    	//                    int passSize = pDataReciveedUart[i+3];
+                    	//                    i+=4;
+                    	//
+                    	//                    for(int j=0; j<passSize ; j++)
+                    	//				    {
+                    	//                    	password/*wifi_settings.password*/[j] = pDataReciveedUart[i++];
+                    	//				    }
+                    	                    	parseData(ssid, password, 2);
+                    					    ESP_LOGI(tag, "password : %s",password/*wifi_settings.password*/);
+                    					    if(pDataReciveedUart[1] == WiFi_AP_MODE)
+                    					    	startConnectionInit(WiFi_AP_MODE,0);
+                    					    else if(pDataReciveedUart[1] == WiFi_STATION_MODE)
+                    					    	 startConnectionInit(WiFi_STATION_MODE,0);}
                     /* enable wifi */
                     else if(pDataReciveedUart[0] == 8)
                     {
@@ -1855,9 +1875,11 @@ void ble_server_uart_task(void *pvParameters)
             }
         }
     }
+    free(dtmp);
+    dtmp = NULL;
     vTaskDelete(NULL);
-}
 
+}
 
 
 int rc ;
@@ -1880,6 +1902,7 @@ app_main(void)
     ble_uart_init();
     spi_init();
     nimble_port_init();
+
 //    ble_hs_cfg.reset_cb = blecent_on_reset;
 //       ble_hs_cfg.sync_cb = blecent_on_sync;
 //       ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
@@ -2005,7 +2028,7 @@ app_main(void)
 //    ble_store_config_init();
 //
 //    nimble_port_freertos_init(bleprph_host_task);
-//    xTaskCreate(ble_server_uart_task, "uTask", 4096, (void *)UART_PORT_x, 8, NULL);
+//    xTaskCreate(uart_event_task, "uTask", 4096, (void *)UART_PORT_x, 8, NULL);
 //    }
 
 //    while(1)
