@@ -109,7 +109,7 @@ extern uint16_t ble_spp_svc_gatt_read_val_handle;
 /*-------------------------------------------------------------server functions---------------------------------------------*/
 char ssid[50] = {0};
 char password[50] = {"12345678"};
-char clent_name[50] = {"clent"};
+char clent_name[50]  ;
 char server_name[50] = {"Reda"};
 uint8_t pDataReciveedUart[512] = {0};
 
@@ -120,7 +120,7 @@ void parseData(char *str1, char *str2, uint8_t numofstr)
 
     for(; i<pDataReciveedUart[1] ; i++)
     {
-    	str1/*wifi_settings.ssid*/[i] = pDataReciveedUart[i+2];
+    	str1/*wifi_settings.ssid*/[i] = pDataReciveedUart[i+3];
     }
 
     ESP_LOGI(tag, "str1 : %s",str1/*wifi_settings.ssid*/);
@@ -167,7 +167,8 @@ uart_enable_pattern_det_baud_intr(EX_UART_NUM, '+', PATTERN_CHR_NUM, 9, 0, 0);
 uart_pattern_queue_reset(EX_UART_NUM, 20);
 
 //Create a task to handler UART event from ISR
-xTaskCreate(uart_event_task, "uart_event_task", 2048, NULL, 12, NULL);
+xTaskCreate(uart_event_task, "uTask", 4096, (void *)UART_PORT_x, 8, NULL);
+//xTaskCreate(uart_event_task, "uart_event_task", 2048, NULL, 12, NULL);
 }
 
 
@@ -1673,101 +1674,107 @@ static void stack_init_deinit(void)
 #endif
 
 void uart_event_task(void *pvParameters)
-{
-    uart_event_t event;
-    size_t buffered_size;
-    uint8_t* dtmp = (uint8_t*) malloc(RD_BUF_SIZE);
-    int rc = 0;
+ {
+	uart_event_t event;
+	size_t buffered_size;
+	uint8_t *dtmp = (uint8_t*) malloc(RD_BUF_SIZE);
+	int rc = 0;
+	char d[8];
 
-//    uint8_t pDataReciveedUart[512] = {0};
+	for (;;) {
 
-    for (;;)
-    {
-//    	ESP_LOGI(tag, "eeeeeeeeeeeeeeeeeeeeee");
-        // Waiting for UART event.
-    	  if(xQueueReceive(uart0_queue, (void * )&event, (TickType_t)portMAX_DELAY)) {
-    	            bzero(dtmp, RD_BUF_SIZE);
-    	            ESP_LOGI("uart_events", "uart[%d] event:", EX_UART_NUM);
-    	            switch(event.type) {
+		// Waiting for UART event.
+		if (xQueueReceive(uart0_queue, (void*) &event,(TickType_t) portMAX_DELAY)) 	{
+			bzero(dtmp, RD_BUF_SIZE);
+			ESP_LOGI("uart_events", "uart[%d] event:", EX_UART_NUM);
+			switch (event.type) {
 
-            // Event of UART receving data
-            case UART_DATA:
-            	/*START HERE*/
-                	ESP_LOGI(tag, "enter to take data");
-                    uart_read_bytes(UART_PORT_x, &pDataReciveedUart[0], event.size, portMAX_DELAY / portTICK_PERIOD_MS);
-                    ESP_LOGI(tag, "size : %d",event.size);
-                    ESP_LOGI(tag, "pDataReciveedUart = %d",pDataReciveedUart[0]);
-                    ESP_LOGI(tag, "pDataReciveedUart = %d",pDataReciveedUart[1]);
-                    uart_write_bytes(EX_UART_NUM, (const char*) pDataReciveedUart, event.size);
-                    /* ble as client */
+			// Event of UART receving data
+			case UART_DATA:
+				/*START HERE*/
+				ESP_LOGI(tag, "enter to take data");
+				uart_read_bytes(UART_PORT_x, &pDataReciveedUart[0], event.size,portMAX_DELAY / portTICK_PERIOD_MS);
+				ESP_LOGI(tag, "size : %d", event.size);
+				ESP_LOGI(tag, "pDataReciveedUart = %d", pDataReciveedUart[0]);
+				ESP_LOGI(tag, "pDataReciveedUart = %d", pDataReciveedUart[1]);
+				uart_write_bytes(EX_UART_NUM, (const char*) pDataReciveedUart,event.size);
 
-                    if(pDataReciveedUart[0] == 1)
-                    {
-//                    	parseData(server_name, clent_name, 2);
-//                        /* Configure the host. */
-//                        ble_hs_cfg.reset_cb = blecent_on_reset;
-//                        ble_hs_cfg.sync_cb = blecent_on_sync;
-//                        ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
-//
-//                        /* Initialize data structures to track connected peers. */
-//                        rc = peer_init(MYNEWT_VAL(BLE_MAX_CONNECTIONS), 64, 64, 64);
-//                        assert(rc == 0);
-//
-//                        /* Set the default device name. */
-////                        rc = ble_svc_gap_device_name_set("nimble-blecent");
-//                        rc = ble_svc_gap_device_name_set(clent_name);
-//                        assert(rc == 0);
-//
-//                        /* XXX Need to have template for store */
-//                        ble_store_config_init();
-//
-//                        nimble_port_freertos_init(blecent_host_task);
-//                        choose = 1;
-                    }
-                    /* ble as server */
-                    else if(pDataReciveedUart[0] == 2)
-                    {
-                    	parseData(server_name, NULL, 1);
-                    	    /* Initialize the NimBLE host configuration. */
-                    	  ble_hs_cfg.reset_cb = bleprph_on_reset;
-                    		    ble_hs_cfg.sync_cb = bleprph_on_sync;
-                    		    ble_hs_cfg.gatts_register_cb = gatt_svr_register_cb;
-                    		    ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
+				/* ble as client */
+				if (pDataReciveedUart[0] == 1) {
+					memcpy(clent_name, &pDataReciveedUart[3],
+							pDataReciveedUart[1]);
+					memcpy(server_name,
+							&pDataReciveedUart[3 + pDataReciveedUart[1]],
+							pDataReciveedUart[2]);
 
-                    		    ble_hs_cfg.sm_io_cap = 3;
-                    		#ifdef CONFIG_EXAMPLE_BONDING
+					parseData(server_name, clent_name, 2);
+					/* Configure the host. */
+					ble_hs_cfg.reset_cb = blecent_on_reset;
+					ble_hs_cfg.sync_cb = blecent_on_sync;
+					ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
+
+					/* Initialize data structures to track connected peers. */
+					rc = peer_init(MYNEWT_VAL(BLE_MAX_CONNECTIONS), 64, 64, 64);
+					assert(rc == 0);
+
+					/* Set the default device name. */
+//                        rc = ble_svc_gap_device_name_set("nimble-blecent");
+					rc = ble_svc_gap_device_name_set(clent_name);
+					assert(rc == 0);
+
+					/* XXX Need to have template for store */
+					ble_store_config_init();
+
+					nimble_port_freertos_init(blecent_host_task);
+					choose = 1;
+				}
+				/* ble as server */
+				else if (pDataReciveedUart[0] == 2) {
+					memcpy(d, &pDataReciveedUart[1], 8);
+					for (int i = 0; i < 8; i++) {
+						ESP_LOGI("BleBuffer", "datarecved: %c ", d[i]);
+					}
+					ESP_LOGI("w", "2");
+					parseData(server_name, NULL, 1);
+					/* Initialize the NimBLE host configuration. */
+					ble_hs_cfg.reset_cb = bleprph_on_reset;
+					ble_hs_cfg.sync_cb = bleprph_on_sync;
+					ble_hs_cfg.gatts_register_cb = gatt_svr_register_cb;
+					ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
+
+					ble_hs_cfg.sm_io_cap = 3;
+#ifdef CONFIG_EXAMPLE_BONDING
                     		    ble_hs_cfg.sm_bonding = 1;
                     		#endif
-                    		#ifdef CONFIG_EXAMPLE_MITM
+#ifdef CONFIG_EXAMPLE_MITM
                     		    ble_hs_cfg.sm_mitm = 1;
                     		#endif
-                    		#ifdef CONFIG_EXAMPLE_USE_SC
+#ifdef CONFIG_EXAMPLE_USE_SC
                     		    ble_hs_cfg.sm_sc = 1;
                     		#else
-                    		    ble_hs_cfg.sm_sc = 0;
-                    		#endif
-                    		#ifdef CONFIG_EXAMPLE_BONDING
+					ble_hs_cfg.sm_sc = 0;
+#endif
+#ifdef CONFIG_EXAMPLE_BONDING
                     		    ble_hs_cfg.sm_our_key_dist = 1;
                     		    ble_hs_cfg.sm_their_key_dist = 1;
                     		#endif
 
+					rc = gatt_svr_init();
+					assert(rc == 0);
 
-                    		    rc = gatt_svr_init();
-                    		    assert(rc == 0);
+					/* Set the default device name. */
+					//                    	    rc = ble_svc_gap_device_name_set("nimble-bleprph");
+					rc = ble_svc_gap_device_name_set(d);
+					assert(rc == 0);
 
-                    		    /* Set the default device name. */
-                    	//                    	    rc = ble_svc_gap_device_name_set("nimble-bleprph");
-                    		    rc = ble_svc_gap_device_name_set(server_name);
-                    		    assert(rc == 0);
+					/* XXX Need to have template for store */
+					ble_store_config_init();
 
-                    		    /* XXX Need to have template for store */
-                    		    ble_store_config_init();
+					nimble_port_freertos_init(bleprph_host_task);
+					choose = 2;
 
-                    		    nimble_port_freertos_init(bleprph_host_task);
-                    		    choose = 2;
-
-                    }
-                    /* send data by spi */
+				}
+				/* send data by spi */
 //                    else if(pDataReciveedUart[0] == 3)
 //                    {
 //                    	 ESP_LOGI(tag, "--------------------------------------------------------Enter to send-----------------");
@@ -1776,7 +1783,7 @@ void uart_event_task(void *pvParameters)
 //                    	 ESP_LOGI(tag,"dummy: %s\n", dummy);
 //
 //                    }
-                    /* receive data by spi */
+				/* receive data by spi */
 //                    else if(pDataReciveedUart[0] == 4)
 //                    {
 //                    	 ESP_LOGI(tag, "-------------------------------------------------------Enter to receive---------------");
@@ -1804,7 +1811,7 @@ void uart_event_task(void *pvParameters)
 //
 //
 //                    }
-                    /* disable BLE */
+				/* disable BLE */
 //                    else if(pDataReciveedUart[0] == 5)
 //                    {
 //                    	ESP_LOGI(tag, "3");
@@ -1817,9 +1824,9 @@ void uart_event_task(void *pvParameters)
 //                        }
 //                    	esp_bt_controller_disable();
 //                    }
-                    /* enable  BLE */
-//                    else if(pDataReciveedUart[0] == 6)
-//                    {
+				/* enable  BLE */
+				else if (pDataReciveedUart[0] == 6) {
+
 //                    	ESP_LOGI(tag, "4");
 //                    	esp_err_t ret;
 //                    	esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
@@ -1829,55 +1836,55 @@ void uart_event_task(void *pvParameters)
 //                        if ((ret = esp_bt_controller_enable(ESP_BT_MODE_BLE)) != ESP_OK) {
 //                        	ESP_LOGI(tag, "error in enable ble");
 //                        }
-//
-//                    }
-                    /* set wifi */
-                    else if(pDataReciveedUart[0] == 7)
-                    {
-                    	//                    int i=0;
-                    	//
-                    	//                    for(; i<pDataReciveedUart[2] ; i++)
-                    	//                    {
-                    	//                    	ssid/*wifi_settings.ssid*/[i] = pDataReciveedUart[i+3];
-                    	//                    }
-                    	//
-                    	//                    ESP_LOGI(tag, "ssid : %s",ssid/*wifi_settings.ssid*/);
-                    	//
-                    	//                    int passSize = pDataReciveedUart[i+3];
-                    	//                    i+=4;
-                    	//
-                    	//                    for(int j=0; j<passSize ; j++)
-                    	//				    {
-                    	//                    	password/*wifi_settings.password*/[j] = pDataReciveedUart[i++];
-                    	//				    }
-                    	                    	parseData(ssid, password, 2);
-                    					    ESP_LOGI(tag, "password : %s",password/*wifi_settings.password*/);
-                    					    if(pDataReciveedUart[1] == WiFi_AP_MODE)
-                    					    	startConnectionInit(WiFi_AP_MODE,0);
-                    					    else if(pDataReciveedUart[1] == WiFi_STATION_MODE)
-                    					    	 startConnectionInit(WiFi_STATION_MODE,0);}
-                    /* enable wifi */
-                    else if(pDataReciveedUart[0] == 8)
-                    {
-                    	if(pDataReciveedUart[1] == WiFi_STATION_MODE)
-                    		esp_wifi_connect();
+					startConnectionInit(WiFi_STATION_MODE, 0);
+				}
+				/* set wifi */
+				else if (pDataReciveedUart[0] == 7) {
+					//                    int i=0;
+					//
+					//                    for(; i<pDataReciveedUart[2] ; i++)
+					//                    {
+					//                    	ssid/*wifi_settings.ssid*/[i] = pDataReciveedUart[i+3];
+					//                    }
+					//
+					//                    ESP_LOGI(tag, "ssid : %s",ssid/*wifi_settings.ssid*/);
+					//
+					//                    int passSize = pDataReciveedUart[i+3];
+					//                    i+=4;
+					//
+					//                    for(int j=0; j<passSize ; j++)
+					//				    {
+					//                    	password/*wifi_settings.password*/[j] = pDataReciveedUart[i++];
+					//				    }
 
-                    }
-                    /* disable wifi */
-                    else if(pDataReciveedUart[0] == 9)
-                    {
-                    	if(pDataReciveedUart[1] == WiFi_STATION_MODE)
-                    		esp_wifi_disconnect();
-                    }
-                break;
-            default:
-                break;
-            }
-        }
-    }
-    free(dtmp);
-    dtmp = NULL;
-    vTaskDelete(NULL);
+					parseData(ssid, password, 2);
+					ESP_LOGI(tag, "password : %s",
+							password/*wifi_settings.password*/);
+//                    					    if(pDataReciveedUart[1] == WiFi_AP_MODE)
+					startConnectionInit(WiFi_AP_MODE, 0);
+//                    					    else if(pDataReciveedUart[1] == WiFi_STATION_MODE)
+
+				}
+				/* enable wifi */
+				else if (pDataReciveedUart[0] == 8) {
+					if (pDataReciveedUart[1] == WiFi_STATION_MODE)
+						esp_wifi_connect();
+
+				}
+				/* disable wifi */
+				else if (pDataReciveedUart[0] == 9) {
+					if (pDataReciveedUart[1] == WiFi_STATION_MODE)
+						esp_wifi_disconnect();
+				}
+				break;
+			default:
+				break;
+			}
+		}
+	}
+	free(dtmp);
+	dtmp = NULL;
+	vTaskDelete(NULL);
 
 }
 
@@ -1902,7 +1909,8 @@ app_main(void)
     ble_uart_init();
     spi_init();
     nimble_port_init();
-
+//    wifi_init_softap();
+	ESP_LOGI("w", "10");
 //    ble_hs_cfg.reset_cb = blecent_on_reset;
 //       ble_hs_cfg.sync_cb = blecent_on_sync;
 //       ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
