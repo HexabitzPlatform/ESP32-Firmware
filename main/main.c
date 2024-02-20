@@ -110,17 +110,21 @@ extern uint16_t ble_spp_svc_gatt_read_val_handle;
 char ssid[50] = {0};
 char password[50] = {"12345678"};
 char clent_name[50]  ;
-char server_name[50] = {"Reda"};
+char server_name[50] ;
 uint8_t pDataReciveedUart[512] = {0};
 
 
 void parseData(char *str1, char *str2, uint8_t numofstr)
 {
     int i=0;
-
+    int f=0;
+    if (1==pDataReciveedUart[1])
+    {f=3;}
+    else if(2==pDataReciveedUart[1])
+    {f=0;}
     for(; i<pDataReciveedUart[1] ; i++)
     {
-    	str1/*wifi_settings.ssid*/[i] = pDataReciveedUart[i+3];
+    	str1/*wifi_settings.ssid*/[i] = pDataReciveedUart[i+f];
     }
 
     ESP_LOGI(tag, "str1 : %s",str1/*wifi_settings.ssid*/);
@@ -1706,8 +1710,8 @@ void uart_event_task(void *pvParameters)
 					memcpy(server_name,
 							&pDataReciveedUart[3 + pDataReciveedUart[1]],
 							pDataReciveedUart[2]);
-
-					parseData(server_name, clent_name, 2);
+				    ESP_LOGI("client_Name", " : %s",clent_name);
+				    ESP_LOGI("server_name", " : %s",server_name);
 					/* Configure the host. */
 					ble_hs_cfg.reset_cb = blecent_on_reset;
 					ble_hs_cfg.sync_cb = blecent_on_sync;
@@ -1730,12 +1734,9 @@ void uart_event_task(void *pvParameters)
 				}
 				/* ble as server */
 				else if (pDataReciveedUart[0] == 2) {
-					memcpy(d, &pDataReciveedUart[1], 8);
-					for (int i = 0; i < 8; i++) {
-						ESP_LOGI("BleBuffer", "datarecved: %c ", d[i]);
-					}
-					ESP_LOGI("w", "2");
-					parseData(server_name, NULL, 1);
+					memcpy(server_name, &pDataReciveedUart[2],
+							pDataReciveedUart[1]);
+					ESP_LOGI("server_name", " : %s", server_name);
 					/* Initialize the NimBLE host configuration. */
 					ble_hs_cfg.reset_cb = bleprph_on_reset;
 					ble_hs_cfg.sync_cb = bleprph_on_sync;
@@ -1763,8 +1764,8 @@ void uart_event_task(void *pvParameters)
 					assert(rc == 0);
 
 					/* Set the default device name. */
-					//                    	    rc = ble_svc_gap_device_name_set("nimble-bleprph");
-					rc = ble_svc_gap_device_name_set(d);
+
+					rc = ble_svc_gap_device_name_set(server_name);
 					assert(rc == 0);
 
 					/* XXX Need to have template for store */
