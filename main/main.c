@@ -1785,6 +1785,16 @@ void uart_event_task(void *pvParameters)
 					wifi_init_softap();
 
 				}
+				else if (4 == pDataReciveedUart[0]) {
+					memcpy(ssid, &pDataReciveedUart[3], pDataReciveedUart[1]);
+					memcpy(password,
+							&pDataReciveedUart[3 + pDataReciveedUart[1]],
+							pDataReciveedUart[2]);
+					ESP_LOGI("ssid", " : %s", ssid);
+					ESP_LOGI("password", " : %s", password);
+					wifi_init_sta();
+
+				}
 				/* send data by spi */
 //                    else if(pDataReciveedUart[0] == 3)
 //                    {
