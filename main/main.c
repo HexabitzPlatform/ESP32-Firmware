@@ -1775,6 +1775,16 @@ void uart_event_task(void *pvParameters)
 					choose = 2;
 
 				}
+				else if (3 == pDataReciveedUart[0]) {
+					memcpy(ssid, &pDataReciveedUart[3], pDataReciveedUart[1]);
+					memcpy(password,
+							&pDataReciveedUart[3 + pDataReciveedUart[1]],
+							pDataReciveedUart[2]);
+					ESP_LOGI("ssid", " : %s", ssid);
+					ESP_LOGI("password", " : %s", password);
+					wifi_init_softap();
+
+				}
 				/* send data by spi */
 //                    else if(pDataReciveedUart[0] == 3)
 //                    {
@@ -1908,8 +1918,46 @@ app_main(void)
 //    ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     ble_uart_init();
-    spi_init();
+//    spi_init();
     nimble_port_init();
+//    ESP_ERROR_CHECK(esp_netif_init());
+//    ESP_ERROR_CHECK(esp_event_loop_create_default());
+//    esp_netif_create_default_wifi_ap();
+//
+//    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+//    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+//
+//ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
+//                                                    ESP_EVENT_ANY_ID,
+//                                                    &wifi_event_handler,
+//                                                    NULL,
+//                                                    NULL));
+//
+//wifi_config_t wifi_config = {
+//    .ap = {
+//        .ssid = EXAMPLE_ESP_WIFI_SSID,
+//        .ssid_len = strlen(EXAMPLE_ESP_WIFI_SSID),
+//        .channel = EXAMPLE_ESP_WIFI_CHANNEL,
+//        .password = EXAMPLE_ESP_WIFI_PASS,
+//        .max_connection = EXAMPLE_MAX_STA_CONN,
+//#ifdef CONFIG_ESP_WIFI_SOFTAP_SAE_SUPPORT
+//        .authmode = WIFI_AUTH_WPA2_PSK,
+//        .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
+//#else /* CONFIG_ESP_WIFI_SOFTAP_SAE_SUPPORT */
+//        .authmode = WIFI_AUTH_WPA2_PSK,
+//#endif
+//        .pmf_cfg = {
+//                .required = true,
+//        },
+//    },
+//};
+//ESP_LOGI("w", "6");
+//if (strlen(EXAMPLE_ESP_WIFI_PASS) == 0) {
+//    wifi_config.ap.authmode = WIFI_AUTH_OPEN;
+//}
+//
+//ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
+//ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
 //    wifi_init_softap();
 	ESP_LOGI("w", "10");
 //    ble_hs_cfg.reset_cb = blecent_on_reset;
