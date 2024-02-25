@@ -64,7 +64,8 @@ void check_con(void);
 #define EXAMPLE_MAX_STA_CONN       4
 
 /******************************************************/
-
+#define UART_PORT_x UART_NUM_0
+#define EX_UART_NUM UART_NUM_0
 /***********************STACTION WIFI**********************/
 
 //	Interface_Info.NetworkName = _NetworkName->valuestring;

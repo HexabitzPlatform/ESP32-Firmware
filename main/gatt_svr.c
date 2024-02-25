@@ -27,7 +27,7 @@
 #include "bleprph.h"
 #include "services/ans/ble_svc_ans.h"
 #include "driver/uart.h"
-
+#include "connection_driver.h"
 /*** Maximum number of characteristics with the notify flag ***/
 #define MAX_NOTIFY 5
 #define INDEX  50
@@ -254,85 +254,89 @@ gatt_svr_write(struct os_mbuf *om, uint16_t min_len, uint16_t max_len,
 static int
 gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
                 struct ble_gatt_access_ctxt *ctxt, void *arg)
-{
-    const ble_uuid_t *uuid;
-    int rc;
+ {
+	const ble_uuid_t *uuid;
+	int rc;
 
-    switch (ctxt->op) {
-    case BLE_GATT_ACCESS_OP_READ_CHR:
-        if (conn_handle != BLE_HS_CONN_HANDLE_NONE) {
-            MODLOG_DFLT(INFO, "Characteristic read; conn_handle=%d attr_handle=%d\n",
-                        conn_handle, attr_handle);
-        } else {
-            MODLOG_DFLT(INFO, "Characteristic read by NimBLE stack; attr_handle=%d\n",
-                        attr_handle);
-        }
-        uuid = ctxt->chr->uuid;
-        if (attr_handle == gatt_svr_chr_val_handle) {
+	switch (ctxt->op) {
+	case BLE_GATT_ACCESS_OP_READ_CHR:
+		if (conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+			MODLOG_DFLT(INFO,
+					"Characteristic read; conn_handle=%d attr_handle=%d\n",
+					conn_handle, attr_handle);
+		} else {
+			MODLOG_DFLT(INFO,
+					"Characteristic read by NimBLE stack; attr_handle=%d\n",
+					attr_handle);
+		}
+		uuid = ctxt->chr->uuid;
+		if (attr_handle == gatt_svr_chr_val_handle) {
 //            rc = os_mbuf_append(ctxt->om,
 //                                &gatt_svr_chr_val,
 //                                sizeof(gatt_svr_chr_val));
-           rc= os_mbuf_append(ctxt->om, BleBuffer,strlen((const char *)BleBuffer));
+			rc = os_mbuf_append(ctxt->om, BleBuffer,
+					strlen((const char*) BleBuffer));
 
-            return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
-        }
-        goto unknown;
+			return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+		}
+		goto unknown;
 
-    case BLE_GATT_ACCESS_OP_WRITE_CHR:
-        if (conn_handle != BLE_HS_CONN_HANDLE_NONE) {
-            MODLOG_DFLT(INFO, "Characteristic write; conn_handle=%d attr_handle=%d",
-                        conn_handle, attr_handle);
-        } else {
-            MODLOG_DFLT(INFO, "Characteristic write by NimBLE stack; attr_handle=%d",
-                        attr_handle);
-        }
-        uuid = ctxt->chr->uuid;
-        if (attr_handle == gatt_svr_chr_val_handle) {
-            rc = gatt_svr_write(ctxt->om,0,sizeof(BleBuffer),BleBuffer, 0);
+	case BLE_GATT_ACCESS_OP_WRITE_CHR:
+		if (conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+			MODLOG_DFLT(INFO,
+					"Characteristic write; conn_handle=%d attr_handle=%d",
+					conn_handle, attr_handle);
+		} else {
+			MODLOG_DFLT(INFO,
+					"Characteristic write by NimBLE stack; attr_handle=%d",
+					attr_handle);
+		}
+		uuid = ctxt->chr->uuid;
+		if (attr_handle == gatt_svr_chr_val_handle) {
+			rc = gatt_svr_write(ctxt->om, 0, sizeof(BleBuffer), BleBuffer, 0);
 
-         for (int i = 0; i <INDEX; i++)
-              {
-                  ESP_LOGI("BleBuffer", "datarecved: %d , length recived BLE=%d" , BleBuffer[i], INDEX);
-              }
-//         memset(BleBuffer, 0, sizeof(BleBuffer));
+			uart_write_bytes(EX_UART_NUM, (const char*) BleBuffer, 20);
 
-            ble_gatts_chr_updated(attr_handle);
-            MODLOG_DFLT(INFO, "Notification/Indication scheduled for "
-                        "all subscribed peers.\n");
-            return rc;
-        }
-        goto unknown;
+			memset(BleBuffer, 0, sizeof(BleBuffer));
 
-    case BLE_GATT_ACCESS_OP_READ_DSC:
-        if (conn_handle != BLE_HS_CONN_HANDLE_NONE) {
-            MODLOG_DFLT(INFO, "Descriptor read; conn_handle=%d attr_handle=%d\n",
-                        conn_handle, attr_handle);
-        } else {
-            MODLOG_DFLT(INFO, "Descriptor read by NimBLE stack; attr_handle=%d\n",
-                        attr_handle);
-        }
-        uuid = ctxt->dsc->uuid;
-        if (ble_uuid_cmp(uuid, &gatt_svr_dsc_uuid.u) == 0) {
-            rc = os_mbuf_append(ctxt->om,
-                                &gatt_svr_dsc_val,
-                                sizeof(gatt_svr_chr_val));
-            return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
-        }
-        goto unknown;
+			ble_gatts_chr_updated(attr_handle);
+			MODLOG_DFLT(INFO,
+					"Notification/Indication scheduled for " "all subscribed peers.\n");
+			return rc;
+		}
+		goto unknown;
 
-    case BLE_GATT_ACCESS_OP_WRITE_DSC:
-        goto unknown;
+	case BLE_GATT_ACCESS_OP_READ_DSC:
+		if (conn_handle != BLE_HS_CONN_HANDLE_NONE) {
+			MODLOG_DFLT(INFO,
+					"Descriptor read; conn_handle=%d attr_handle=%d\n",
+					conn_handle, attr_handle);
+		} else {
+			MODLOG_DFLT(INFO,
+					"Descriptor read by NimBLE stack; attr_handle=%d\n",
+					attr_handle);
+		}
+		uuid = ctxt->dsc->uuid;
+		if (ble_uuid_cmp(uuid, &gatt_svr_dsc_uuid.u) == 0) {
+			rc = os_mbuf_append(ctxt->om, &gatt_svr_dsc_val,
+					sizeof(gatt_svr_chr_val));
+			return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
+		}
+		goto unknown;
 
-    default:
-        goto unknown;
-    }
+	case BLE_GATT_ACCESS_OP_WRITE_DSC:
+		goto unknown;
 
-unknown:
-    /* Unknown characteristic/descriptor;
-     * The NimBLE host should not have called this function;
-     */
-    assert(0);
-    return BLE_ATT_ERR_UNLIKELY;
+	default:
+		goto unknown;
+	}
+
+	unknown:
+	/* Unknown characteristic/descriptor;
+	 * The NimBLE host should not have called this function;
+	 */
+	assert(0);
+	return BLE_ATT_ERR_UNLIKELY;
 }
 
 void

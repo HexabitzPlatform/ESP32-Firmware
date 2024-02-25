@@ -43,10 +43,7 @@
 
 
 /* uart pins */
-#define UART_PORT_x UART_NUM_0
-#define UART_TX_PIN_ST GPIO_NUM_19
-#define UART_RX_PIN_ST GPIO_NUM_18
-#define EX_UART_NUM UART_NUM_0
+
 #define PATTERN_CHR_NUM    (3)         /*!< Set the number of consecutive and identical characters received by receiver which defines a UART pattern*/
 
 #define BUF_SIZE (1024)
@@ -1698,10 +1695,11 @@ void uart_event_task(void *pvParameters)
 				/*START HERE*/
 				ESP_LOGI(tag, "enter to take data");
 				uart_read_bytes(UART_PORT_x, &pDataReciveedUart[0], event.size,portMAX_DELAY / portTICK_PERIOD_MS);
+				esp_log_level_set("NimBLE_BLE_CENT",  ESP_LOG_INFO);
 				ESP_LOGI(tag, "size : %d", event.size);
 				ESP_LOGI(tag, "pDataReciveedUart = %d", pDataReciveedUart[0]);
 				ESP_LOGI(tag, "pDataReciveedUart = %d", pDataReciveedUart[1]);
-				uart_write_bytes(EX_UART_NUM, (const char*) pDataReciveedUart,event.size);
+//				uart_write_bytes(EX_UART_NUM, (const char*) pDataReciveedUart,event.size);
 
 				/* ble as client */
 				if (pDataReciveedUart[0] == 1) {
