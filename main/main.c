@@ -72,7 +72,8 @@ uint8_t flag=0;
 char recbuf[129]={0};
 uint8_t choose = 0;
 char serverName[50];
-
+extern uint8_t BleBuffer[20];
+extern uint8_t BleReadBuffer[20];
 static int blecent_gap_event(struct ble_gap_event *event, void *arg);
 void ble_store_config_init(void);
 /*end*/
@@ -1699,10 +1700,10 @@ void uart_event_task(void *pvParameters)
 				ESP_LOGI(tag, "size : %d", event.size);
 				ESP_LOGI(tag, "pDataReciveedUart = %d", pDataReciveedUart[0]);
 				ESP_LOGI(tag, "pDataReciveedUart = %d", pDataReciveedUart[1]);
-//				uart_write_bytes(EX_UART_NUM, (const char*) pDataReciveedUart,event.size);
+//		    	uart_write_bytes(EX_UART_NUM, (const char*) pDataReciveedUart,event.size);
 
-				/* ble as client */
-				if (pDataReciveedUart[0] == 1) {
+                /* ble as client */
+				if ( 1 == pDataReciveedUart[0]) {
 					memcpy(clent_name, &pDataReciveedUart[3],
 							pDataReciveedUart[1]);
 					memcpy(server_name,
@@ -1729,9 +1730,10 @@ void uart_event_task(void *pvParameters)
 
 					nimble_port_freertos_init(blecent_host_task);
 					choose = 1;
+					memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
 				}
 				/* ble as server */
-				else if (pDataReciveedUart[0] == 2) {
+				else if ( 2 == pDataReciveedUart[0]) {
 					memcpy(server_name, &pDataReciveedUart[2],
 							pDataReciveedUart[1]);
 					ESP_LOGI("server_name", " : %s", server_name);
@@ -1771,6 +1773,7 @@ void uart_event_task(void *pvParameters)
 
 					nimble_port_freertos_init(bleprph_host_task);
 					choose = 2;
+					memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
 
 				}
 				else if (3 == pDataReciveedUart[0]) {
@@ -1781,7 +1784,7 @@ void uart_event_task(void *pvParameters)
 					ESP_LOGI("ssid", " : %s", ssid);
 					ESP_LOGI("password", " : %s", password);
 					wifi_init_softap();
-
+					memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
 				}
 				else if (4 == pDataReciveedUart[0]) {
 					memcpy(ssid, &pDataReciveedUart[3], pDataReciveedUart[1]);
@@ -1791,8 +1794,15 @@ void uart_event_task(void *pvParameters)
 					ESP_LOGI("ssid", " : %s", ssid);
 					ESP_LOGI("password", " : %s", password);
 					wifi_init_sta();
-
+					memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
 				}
+				else if (5 == pDataReciveedUart[0]) {
+						memcpy(BleReadBuffer, &pDataReciveedUart[2], pDataReciveedUart[1]);
+						memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
+
+					}
+
+
 				/* send data by spi */
 //                    else if(pDataReciveedUart[0] == 3)
 //                    {

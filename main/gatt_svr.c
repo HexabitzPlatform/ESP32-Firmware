@@ -30,8 +30,9 @@
 #include "connection_driver.h"
 /*** Maximum number of characteristics with the notify flag ***/
 #define MAX_NOTIFY 5
-#define INDEX  50
-uint8_t BleBuffer[INDEX]={0};
+uint8_t Data[20]={2};
+uint8_t BleBuffer[20]={0};
+uint8_t BleReadBuffer[20]={0};
 uint16_t ble_svc_gatt_read_val_handle, ble_spp_svc_gatt_read_val_handle, ble_spp_svc_gatt_write_val_handle;
 extern const char *master_tag;
 extern char recvbuf[129];
@@ -274,9 +275,12 @@ gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
 //            rc = os_mbuf_append(ctxt->om,
 //                                &gatt_svr_chr_val,
 //                                sizeof(gatt_svr_chr_val));
-			rc = os_mbuf_append(ctxt->om, BleBuffer,
-					strlen((const char*) BleBuffer));
-
+			rc = os_mbuf_append(ctxt->om, BleReadBuffer,
+					strlen((const char*) BleReadBuffer));
+			Data[0]=1;
+			uart_write_bytes(EX_UART_NUM, (const char*) Data, 20);
+			memset(BleReadBuffer, 0, sizeof(BleReadBuffer));
+			memset(Data, 0, sizeof(Data));
 			return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 		}
 		goto unknown;
@@ -293,10 +297,13 @@ gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
 		}
 		uuid = ctxt->chr->uuid;
 		if (attr_handle == gatt_svr_chr_val_handle) {
-			rc = gatt_svr_write(ctxt->om, 0, sizeof(BleBuffer), BleBuffer, 0);
+			rc = gatt_svr_write(ctxt->om, 0, 18, BleBuffer, 0);
+			Data[0] = 'H';
+			Data[1] = 'Z';
+			memcpy(&Data[2], BleBuffer, 18);
+			uart_write_bytes(EX_UART_NUM, (const char*) Data, 20);
 
-			uart_write_bytes(EX_UART_NUM, (const char*) BleBuffer, 20);
-
+			memset(Data, 0, sizeof(Data));
 			memset(BleBuffer, 0, sizeof(BleBuffer));
 
 			ble_gatts_chr_updated(attr_handle);
