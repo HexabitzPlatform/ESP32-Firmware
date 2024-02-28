@@ -30,7 +30,7 @@
 #include "connection_driver.h"
 /*** Maximum number of characteristics with the notify flag ***/
 #define MAX_NOTIFY 5
-uint8_t Data[20]={2};
+uint8_t Data[20];
 uint8_t BleBuffer[20]={0};
 uint8_t BleReadBuffer[20]={0};
 uint16_t ble_svc_gatt_read_val_handle, ble_spp_svc_gatt_read_val_handle, ble_spp_svc_gatt_write_val_handle;

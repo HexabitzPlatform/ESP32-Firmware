@@ -74,6 +74,8 @@ uint8_t choose = 0;
 char serverName[50];
 extern uint8_t BleBuffer[20];
 extern uint8_t BleReadBuffer[20];
+extern uint8_t Data[20];
+uint16_t conn;
 static int blecent_gap_event(struct ble_gap_event *event, void *arg);
 void ble_store_config_init(void);
 /*end*/
@@ -98,7 +100,7 @@ void spi_init();
 void receive_data(char *buf);
 void send_data(char *buf);
 void send_receive_data(char *send,char *rec);
-int write_data(char *data);
+//int write_data(char *data);
 int read_data();
 static void ble_uart_init(void);
 void uart_event_task(void *pvParameters);
@@ -817,85 +819,14 @@ err:
  * Application Callback. Called when the custom subscribable characteristic
  * is subscribed to.
  **/
-uint16_t dd;
-int write_data(char *data)
-{
-    const struct peer_chr *chr;
-//	   const struct peer_dsc *dsc;
-	   const struct peer_chr *dsc;
-	          uint8_t value[5];
-	          int rc;
-	          const struct peer *peer ;
-//			  = peer_find(conn_handle);
-	          vTaskDelay(100);
-	        	          ESP_LOGI("eeeeeeeeeee","eeeeeeeee %d",1);
-	        	     	 peer = peer_find(dd);
-	        	     	ESP_LOGI("eeeeeeeeeee","eeeeeeeee %d",2);
-//	        	     	   dsc = peer_dsc_find_uuid(peer,
-//	        	     	                             BLE_UUID16_DECLARE(BLECENT_SVC_ALERT_UUID),
-//	        	     	                             BLE_UUID16_DECLARE(BLECENT_CHR_UNR_ALERT_STAT_UUID),
-//	        	     	                             BLE_UUID16_DECLARE(BLE_GATT_DSC_CLT_CFG_UUID16));
-//
-//	        	     	dsc = peer_chr_find_uuid(peer,
-//	        	     	    		service1,
-//	        	     				char2);
 
-	        	     	 chr = peer_chr_find_uuid(peer,
-	        	     	                             remote_svc_uuid,
-	        	     	                             remote_chr_uuid);
-	          ESP_LOGI("eeeeeeeeeee","eeeeeeeee %d",3);
-	          if (chr == NULL) {
-	              MODLOG_DFLT(ERROR, "Error: Peer lacks a CCCD for the Unread Alert "
-	                          "Status characteristic\n");
-	//              goto err;
-	          }
-
-	          value[0] = 1;
-	          value[1] = 10;
-	          value[2] = 5;
-	          value[3] = 7;
-	          value[4] = 180;
-	          rc = ble_gattc_write_flat(dd, chr->chr.val_handle,
-	                                       value, sizeof(value), blecent_on_custom_write, NULL);
-	          if (rc != 0) {
-	              MODLOG_DFLT(ERROR, "Error: Failed to subscribe to characteristic; "
-	                          "rc=%d\n", rc);
-	//              goto err;
-	          }
-
-//	uint8_t ww[2];
-//	const struct peer *peer;
-//	const struct peer_chr *chr;
-//	int rc;
-//    peer = peer_find(conn_handle);
-//    chr = peer_chr_find_uuid(peer,
-//                             remote_svc_uuid,
-//                             remote_chr_uuid);
-//	    if (chr == NULL) {
-//	        MODLOG_DFLT(ERROR, "Error: Peer doesn't have the subscribable characteristic\n");
-//	        return 1;
-//	    }
-//	    ww[0]=1;
-//	    ww[1]=2;
-//	        rc = ble_gattc_write_flat(conn_handle, chr->chr.val_handle,
-//	                                  ww, sizeof(ww), blecent_on_custom_write, NULL);
-////
-////	rc = ble_gattc_write_flat(conn_handle, chr->chr.val_handle,
-////			data/*value*/, strlen(data)/*6*/, NULL/*blecent_on_custom_write*/, NULL);
-//	if (rc != 0) {
-//		MODLOG_DFLT(ERROR,
-//					"Error: Failed to write to the subscribable characteristic; "
-//					"rc=%d\n", rc);
-//	}
-	return 0;
-}
 static int
 blecent_on_custom_subscribe(uint16_t conn_handle,
                             const struct ble_gatt_error *error,
                             struct ble_gatt_attr *attr,
                             void *arg)
 {
-//	char rr[3]={"gfd"};
+
     const struct peer_chr *chr;
     uint8_t value;
     int rc;
@@ -931,7 +862,10 @@ blecent_on_custom_subscribe(uint16_t conn_handle,
                     "rc=%d\n", rc);
         goto err;
     }
+	Data[0]=1;
+	uart_write_bytes(EX_UART_NUM, (const char*) Data, 20);
   flagg=1;
+
     return 0;
 
 err:
@@ -1029,7 +963,7 @@ blecent_on_write(uint16_t conn_handle,
     uint8_t value[2];
     int rc;
     const struct peer *peer = peer_find(conn_handle);
-dd=conn_handle;
+	conn = conn_handle;
     dsc = peer_dsc_find_uuid(peer,
                              BLE_UUID16_DECLARE(BLECENT_SVC_ALERT_UUID),
                              BLE_UUID16_DECLARE(BLECENT_CHR_UNR_ALERT_STAT_UUID),
@@ -1638,6 +1572,35 @@ void blecent_host_task(void *param)
 
     nimble_port_freertos_deinit();
 }
+int write_data(uint8_t *data)
+ {
+	const struct peer_chr *chr;
+	int rc;
+	const struct peer *peer;
+	uint8_t Bledata[18];
+
+	memcpy(Bledata, data,
+			18);
+	peer = peer_find(conn);
+	chr = peer_chr_find_uuid(peer, remote_svc_uuid, remote_chr_uuid);
+	if (chr == NULL) {
+		MODLOG_DFLT(ERROR,
+				"Error: Peer lacks a CCCD for the Unread Alert " "Status characteristic\n");
+	}
+
+	rc = ble_gattc_write_flat(conn, chr->chr.val_handle, Bledata, sizeof(Bledata),
+			blecent_on_custom_write, NULL);
+	if (rc != 0) {
+		MODLOG_DFLT(ERROR,
+				"Error: Failed to subscribe to characteristic; " "rc=%d\n", rc);
+	}
+
+	memset(Bledata, 0, sizeof(Bledata));
+
+
+	return 0;
+}
+
 
 #if CONFIG_EXAMPLE_INIT_DEINIT_LOOP
 /* This function showcases stack init and deinit procedure. */
@@ -1801,110 +1764,19 @@ void uart_event_task(void *pvParameters)
 						memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
 
 					}
+				else if (6 == pDataReciveedUart[0]) {
+
+					    uint8_t BleClientBuffer[18];
+						memcpy(BleClientBuffer, &pDataReciveedUart[2], pDataReciveedUart[1]);
+						write_data(BleClientBuffer);
+						Data[0]=1;
+						uart_write_bytes(EX_UART_NUM, (const char*) Data, 20);
+                        memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
+                        vTaskDelay(200);
+					}
 
 
-				/* send data by spi */
-//                    else if(pDataReciveedUart[0] == 3)
-//                    {
-//                    	 ESP_LOGI(tag, "--------------------------------------------------------Enter to send-----------------");
-//                    	 send_receive_data(tranbuf,dummy);
-//                    	 ESP_LOGI(tag,"tranbuf: %s\n", tranbuf);
-//                    	 ESP_LOGI(tag,"dummy: %s\n", dummy);
-//
-//                    }
-				/* receive data by spi */
-//                    else if(pDataReciveedUart[0] == 4)
-//                    {
-//                    	 ESP_LOGI(tag, "-------------------------------------------------------Enter to receive---------------");
-//                    	 send_receive_data(dummy,recvbuf);
-//                    	 ESP_LOGI(tag,"recvbuf: %s\n", recvbuf);
-//                    	if(choose == 1)
-//                    	{
-//                    		write_data(recvbuf);
-//                    	}
-//                    	if(choose == 2)
-//                    	{
-//                    		/* the client will read data from BLE_GAP_EVENT_NOTIFY_RX */
-//                    		 struct os_mbuf *txom;
-//                    		 txom = ble_hs_mbuf_from_flat(recvbuf, strlen(recvbuf));
-//                    		 int rc = ble_gattc_notify_custom(conn_handle, ble_spp_svc_gatt_read_val_handle, txom);
-//                    	        if (rc == 0)
-//                    	        {
-//                    	            ESP_LOGI(master_tag, "Notification sent successfully");
-//                    	        }
-//                    	        else
-//                    	        {
-//                    	            ESP_LOGI(master_tag, "Error in sending notification");
-//                    	        }
-//                    	}
-//
-//
-//                    }
-				/* disable BLE */
-//                    else if(pDataReciveedUart[0] == 5)
-//                    {
-//                    	ESP_LOGI(tag, "3");
-//                    	esp_err_t ret;
-//                        if ((ret = esp_bt_controller_deinit()) != ESP_OK) {
-//                        	ESP_LOGI(tag, "error in controller_deinit");
-//                        }
-//                        if ((ret = esp_bt_controller_disable()) != ESP_OK) {
-//                        	ESP_LOGI(tag, "error in disable ble");
-//                        }
-//                    	esp_bt_controller_disable();
-//                    }
-				/* enable  BLE */
-				else if (pDataReciveedUart[0] == 6) {
 
-//                    	ESP_LOGI(tag, "4");
-//                    	esp_err_t ret;
-//                    	esp_bt_controller_config_t bt_cfg = BT_CONTROLLER_INIT_CONFIG_DEFAULT();
-//                        if ((ret = esp_bt_controller_init(&bt_cfg)) != ESP_OK) {
-//                        	ESP_LOGI(tag, "error in controller_init");
-//                        }
-//                        if ((ret = esp_bt_controller_enable(ESP_BT_MODE_BLE)) != ESP_OK) {
-//                        	ESP_LOGI(tag, "error in enable ble");
-//                        }
-					startConnectionInit(WiFi_STATION_MODE, 0);
-				}
-				/* set wifi */
-				else if (pDataReciveedUart[0] == 7) {
-					//                    int i=0;
-					//
-					//                    for(; i<pDataReciveedUart[2] ; i++)
-					//                    {
-					//                    	ssid/*wifi_settings.ssid*/[i] = pDataReciveedUart[i+3];
-					//                    }
-					//
-					//                    ESP_LOGI(tag, "ssid : %s",ssid/*wifi_settings.ssid*/);
-					//
-					//                    int passSize = pDataReciveedUart[i+3];
-					//                    i+=4;
-					//
-					//                    for(int j=0; j<passSize ; j++)
-					//				    {
-					//                    	password/*wifi_settings.password*/[j] = pDataReciveedUart[i++];
-					//				    }
-
-					parseData(ssid, password, 2);
-					ESP_LOGI(tag, "password : %s",
-							password/*wifi_settings.password*/);
-//                    					    if(pDataReciveedUart[1] == WiFi_AP_MODE)
-					startConnectionInit(WiFi_AP_MODE, 0);
-//                    					    else if(pDataReciveedUart[1] == WiFi_STATION_MODE)
-
-				}
-				/* enable wifi */
-				else if (pDataReciveedUart[0] == 8) {
-					if (pDataReciveedUart[1] == WiFi_STATION_MODE)
-						esp_wifi_connect();
-
-				}
-				/* disable wifi */
-				else if (pDataReciveedUart[0] == 9) {
-					if (pDataReciveedUart[1] == WiFi_STATION_MODE)
-						esp_wifi_disconnect();
-				}
 				break;
 			default:
 				break;
@@ -1919,7 +1791,7 @@ void uart_event_task(void *pvParameters)
 
 
 int rc ;
-char d[5]="hello";
+uint8_t  d[5]={1,2,3,'j'};
 void
 app_main(void)
 {
@@ -1938,6 +1810,15 @@ app_main(void)
     ble_uart_init();
 //    spi_init();
     nimble_port_init();
+
+
+//	while(1){
+//if(1==flagg){
+//	write_data(d);}}
+
+
+
+
 //    ESP_ERROR_CHECK(esp_netif_init());
 //    ESP_ERROR_CHECK(esp_event_loop_create_default());
 //    esp_netif_create_default_wifi_ap();
