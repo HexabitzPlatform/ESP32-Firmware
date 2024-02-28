@@ -27,6 +27,7 @@
 /**
  * Utility function to log an array of bytes.
  */
+extern uint8_t BleReadDataClient[20] ;
 void
 print_bytes(const uint8_t *bytes, int len)
 {
@@ -62,6 +63,7 @@ print_mbuf(const struct os_mbuf *om)
         for (i = 0; i < om->om_len; i++) {
             MODLOG_DFLT(INFO, "%s0x%02x", i != 0 ? ":" : "", om->om_data[i]);
             ESP_LOGI("client", "om->om_data[%d] = %d",i, om->om_data[i]);
+            BleReadDataClient[i]=om->om_data[i];
         }
 
         om = SLIST_NEXT(om, om_next);

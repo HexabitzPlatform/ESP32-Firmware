@@ -91,7 +91,6 @@ char tranbuf[129]={0};
 char dummy[129]={0};
 spi_slave_transaction_t t;
 uint16_t read_handle;
-int flagg=0;
 //uint16_t ble_svc_gatt_read_val_handle, ble_spp_svc_gatt_read_val_handle, ble_spp_svc_gatt_write_val_handle;
 static int bleprph_gap_event(struct ble_gap_event *event, void *arg);
 static void bleprph_print_conn_desc(struct ble_gap_conn_desc *desc);
@@ -112,8 +111,8 @@ char password[50] = {"12345678"};
 char clent_name[50]  ;
 char server_name[50] ;
 uint8_t pDataReciveedUart[512] = {0};
-
-
+uint16_t connr;
+uint8_t BleReadDataClient[20] ;
 void parseData(char *str1, char *str2, uint8_t numofstr)
 {
     int i=0;
@@ -228,32 +227,6 @@ void send_receive_data(char *send,char *rec)
 	t.rx_buffer=rec;
 	t.tx_buffer=send;
 	spi_slave_transmit(SPI2_HOST, &t, /*1000*/portMAX_DELAY);
-}
-
-
-int read_data()
-{
-	const struct peer *peer;
-	const struct peer_chr *chr;
-	int rc;
-	 peer = peer_find(conn_handle);
-	    chr = peer_chr_find_uuid(peer,
-	    		service1,
-				char1
-				);
-	    if (chr == NULL) {
-	        MODLOG_DFLT(ERROR, "Error: Peer doesn't have the subscribable characteristic\n");
-	        return 1;
-	    }
-	rc = ble_gattc_read(conn_handle, chr->chr.val_handle,
-						NULL/*blecent_on_custom_read*/, NULL);
-
-	if (rc != 0) {
-		MODLOG_DFLT(ERROR,
-					"Error: Failed to read the custom subscribable characteristic; "
-					"rc=%d\n", rc);
-	}
-	return 0;
 }
 
 
@@ -864,8 +837,6 @@ blecent_on_custom_subscribe(uint16_t conn_handle,
     }
 	Data[0]=1;
 	uart_write_bytes(EX_UART_NUM, (const char*) Data, 20);
-  flagg=1;
-
     return 0;
 
 err:
@@ -1069,7 +1040,7 @@ blecent_read_write_subscribe(const struct peer *peer)
                     "Alert Category characteristic\n");
         goto err;
     }
-
+    connr= peer->conn_handle;
     rc = ble_gattc_read(peer->conn_handle, chr->chr.val_handle,
                         blecent_on_read, NULL);
     if (rc != 0) {
@@ -1601,6 +1572,34 @@ int write_data(uint8_t *data)
 	return 0;
 }
 
+int read_data()
+{
+	const struct peer *peer;
+	const struct peer_chr *chr;
+	int rc;
+	ESP_LOGI("w", "11");
+	 peer = peer_find(conn);
+	 chr = peer_chr_find_uuid(peer, remote_svc_uuid, remote_chr_uuid);
+	    if (chr == NULL) {
+	        MODLOG_DFLT(ERROR, "Error: Peer doesn't have the subscribable characteristic\n");
+	        return 1;
+	    }
+		ESP_LOGI("w", "12");
+	rc = ble_gattc_read(connr, chr->chr.val_handle,
+			blecent_on_custom_read/*blecent_on_custom_read*/, NULL);
+				for (int i = 0; i < 18; ++i) {
+					ESP_LOGI("BleReadDataClient","BleReadDataClient = %d",BleReadDataClient[i]);
+				}
+	if (rc != 0) {
+		MODLOG_DFLT(ERROR,
+					"Error: Failed to read the custom subscribable characteristic; "
+					"rc=%d\n", rc);
+	}
+	return 0;
+}
+
+
+
 
 #if CONFIG_EXAMPLE_INIT_DEINIT_LOOP
 /* This function showcases stack init and deinit procedure. */
@@ -1765,15 +1764,29 @@ void uart_event_task(void *pvParameters)
 
 					}
 				else if (6 == pDataReciveedUart[0]) {
-
 					    uint8_t BleClientBuffer[18];
 						memcpy(BleClientBuffer, &pDataReciveedUart[2], pDataReciveedUart[1]);
 						write_data(BleClientBuffer);
 						Data[0]=1;
 						uart_write_bytes(EX_UART_NUM, (const char*) Data, 20);
                         memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
-                        vTaskDelay(200);
+                        vTaskDelay(100);
 					}
+				else if (7 == pDataReciveedUart[0]) {
+				    	read_data();
+						Data[0]='H';
+						Data[1]='Z';
+						memcpy(&Data[2],BleReadDataClient,18);
+						uart_write_bytes(EX_UART_NUM, (const char*) Data, 20);
+                        memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
+                        memset(BleReadDataClient, 0, sizeof(BleReadDataClient));
+                        memset(Data, 0, sizeof(Data));
+                        vTaskDelay(50);
+						Data[0]=1;
+						uart_write_bytes(EX_UART_NUM, (const char*) Data, 20);
+						vTaskDelay(100);
+					}
+
 
 
 
@@ -1808,201 +1821,9 @@ app_main(void)
 //    ESP_ERROR_CHECK(esp_event_loop_create_default());
 
     ble_uart_init();
-//    spi_init();
     nimble_port_init();
 
 
-//	while(1){
-//if(1==flagg){
-//	write_data(d);}}
-
-
-
-
-//    ESP_ERROR_CHECK(esp_netif_init());
-//    ESP_ERROR_CHECK(esp_event_loop_create_default());
-//    esp_netif_create_default_wifi_ap();
-//
-//    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
-//    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
-//
-//ESP_ERROR_CHECK(esp_event_handler_instance_register(WIFI_EVENT,
-//                                                    ESP_EVENT_ANY_ID,
-//                                                    &wifi_event_handler,
-//                                                    NULL,
-//                                                    NULL));
-//
-//wifi_config_t wifi_config = {
-//    .ap = {
-//        .ssid = EXAMPLE_ESP_WIFI_SSID,
-//        .ssid_len = strlen(EXAMPLE_ESP_WIFI_SSID),
-//        .channel = EXAMPLE_ESP_WIFI_CHANNEL,
-//        .password = EXAMPLE_ESP_WIFI_PASS,
-//        .max_connection = EXAMPLE_MAX_STA_CONN,
-//#ifdef CONFIG_ESP_WIFI_SOFTAP_SAE_SUPPORT
-//        .authmode = WIFI_AUTH_WPA2_PSK,
-//        .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
-//#else /* CONFIG_ESP_WIFI_SOFTAP_SAE_SUPPORT */
-//        .authmode = WIFI_AUTH_WPA2_PSK,
-//#endif
-//        .pmf_cfg = {
-//                .required = true,
-//        },
-//    },
-//};
-//ESP_LOGI("w", "6");
-//if (strlen(EXAMPLE_ESP_WIFI_PASS) == 0) {
-//    wifi_config.ap.authmode = WIFI_AUTH_OPEN;
-//}
-//
-//ESP_ERROR_CHECK(esp_wifi_set_mode(WIFI_MODE_AP));
-//ESP_ERROR_CHECK(esp_wifi_set_config(WIFI_IF_AP, &wifi_config));
-//    wifi_init_softap();
-	ESP_LOGI("w", "10");
-//    ble_hs_cfg.reset_cb = blecent_on_reset;
-//       ble_hs_cfg.sync_cb = blecent_on_sync;
-//       ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
-//
-//       /* Initialize data structures to track connected peers. */
-//       rc = peer_init(MYNEWT_VAL(BLE_MAX_CONNECTIONS), 64, 64, 64);
-//       assert(rc == 0);
-//
-//       /* Set the default device name. */
-//       rc = ble_svc_gap_device_name_set("nimble-blecent");
-//       assert(rc == 0);
-//
-//       /* XXX Need to have template for store */
-//       ble_store_config_init();
-//
-//       nimble_port_freertos_init(blecent_host_task);
-//
-//   #if CONFIG_EXAMPLE_INIT_DEINIT_LOOP
-//       stack_init_deinit();
-//   #endif
-//
-//while(1)
-//{
-//	vTaskDelay(100);
-//ESP_LOGI("ssssssss","flagg %d", flagg);
-//
-//vTaskDelay(100);
-//
-//if (flagg==1)
-//{ESP_LOGI("ddddddddd","flagg %d", flagg);
-//	write_data(1);
-//}
-//}
-
-    /* Configure the host. */
-
-	    /* Initialize the NimBLE host configuration. */
-
-    // Set up interrupt handler for SPI receive events
-//       spi_isr_register(spi_slave_receive_handler, NULL, 0, NULL, 0);
-//    /* adding  */
-//    while(choose != 1  && choose != 2)
-//    {
-//    uart_read_bytes(UART_PORT_x, &choose, sizeof(choose), portMAX_DELAY / portTICK_RATE_MS);
-//    ESP_LOGI(master_tag,"choose = %d",choose);
-//    }
-//    /*end*/
-//    ESP_ERROR_CHECK(esp_nimble_hci_and_controller_init());
-
-//    nimble_port_init();
-//    if (ret != ESP_OK) {
-//            ESP_LOGE(tag, "Failed to init nimble %d ", ret);
-//            return;
-//        }
-//
-//	parseData(ssid, password, 2);
-//				    ESP_LOGI(tag, "password : %s",password/*wifi_settings.password*/);
-//				    if(pDataReciveedUart[1] == WiFi_AP_MODE)
-//    wifi_init_softap();
-//				    	startConnectionInit(WiFi_STATION_MODE,0);
-//				    else if(pDataReciveedUart[1] == WiFi_STATION_MODE)
-//				    	 startConnectionInit(WiFi_STATION_MODE,0);
-
-    /* ----------------------------------either client-------------------------------- */
-//    if(choose == 1)
-//    {
-//    /* Configure the host. */
-//    ble_hs_cfg.reset_cb = blecent_on_reset;
-//    ble_hs_cfg.sync_cb = blecent_on_sync;
-//    ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
-//
-//    /* Initialize data structures to track connected peers. */
-//    rc = peer_init(MYNEWT_VAL(BLE_MAX_CONNECTIONS), 64, 64, 64);
-//    assert(rc == 0);
-//
-//    /* Set the default device name. */
-//    rc = ble_svc_gap_device_name_set("nimble-blecent");
-//    assert(rc == 0);
-//
-//    /* XXX Need to have template for store */
-//    ble_store_config_init();
-//
-//    nimble_port_freertos_init(blecent_host_task);
-//    }
-    /* ----------------------------------or master-------------------------------- */
-//    else if(choose == 2)
-//    {
-////        ble_uart_init();
-////        spi_init();
-//    /* Initialize the NimBLE host configuration. */
-//    ble_hs_cfg.reset_cb = bleprph_on_reset;
-//    ble_hs_cfg.sync_cb = bleprph_on_sync;
-//    ble_hs_cfg.gatts_register_cb = gatt_svr_register_cb;
-//    ble_hs_cfg.store_status_cb = ble_store_util_status_rr;
-//
-//    ble_hs_cfg.sm_io_cap = 3;
-//#ifdef CONFIG_EXAMPLE_BONDING
-//    ble_hs_cfg.sm_bonding = 1;
-//#endif
-//#ifdef CONFIG_EXAMPLE_MITM
-//    ble_hs_cfg.sm_mitm = 1;
-//#endif
-//#ifdef CONFIG_EXAMPLE_USE_SC
-//    ble_hs_cfg.sm_sc = 1;
-//#else
-//    ble_hs_cfg.sm_sc = 0;
-//#endif
-//#ifdef CONFIG_EXAMPLE_BONDING
-//    ble_hs_cfg.sm_our_key_dist = 1;
-//    ble_hs_cfg.sm_their_key_dist = 1;
-//#endif
-//
-//
-//    rc = gatt_svr_init();
-////    gatt_svr_register();
-//    assert(rc == 0);
-//
-//    /* Set the default device name. */
-//    rc = ble_svc_gap_device_name_set("nimble-bleprph");
-//    assert(rc == 0);
-//
-//    /* XXX Need to have template for store */
-//    ble_store_config_init();
-//
-//    nimble_port_freertos_init(bleprph_host_task);
-//    xTaskCreate(uart_event_task, "uTask", 4096, (void *)UART_PORT_x, 8, NULL);
-//    }
-
-//    while(1)
-//    {
-////    	if(choose == 1)
-////    	{
-////    	if(flag == 1)
-////    	{
-//////    	write_data(d);
-//////    	vTaskDelay(3000 / portTICK_PERIOD_MS);
-////    	read_data();
-////    	vTaskDelay(3000 / portTICK_PERIOD_MS);
-////    	}
-////    	}
-//    }
-
-//    send_data(d);
-//    vTaskDelay(3000 / portTICK_PERIOD_MS);
 
 }
 
