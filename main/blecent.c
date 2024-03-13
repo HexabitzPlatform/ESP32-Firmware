@@ -141,7 +141,7 @@ int blecent_on_custom_subscribe(uint16_t conn_handle,
 		goto err;
 	}
 	Data[0] = 1;
-	uart_write_bytes(EX_UART_NUM, (const char*) Data, 20);
+	uart_write_bytes(EX_UART_NUM, (const char*) Data, 22);
 	return 0;
 
 	err:

@@ -243,7 +243,7 @@ void uart_event_task(void *pvParameters) {
 							pDataReciveedUart[1]);
 					write_data(BleClientBuffer);
 					Data[0] = 1;
-					uart_write_bytes(EX_UART_NUM, (const char*) Data, 20);
+					uart_write_bytes(EX_UART_NUM, (const char*) Data, 22);
 					memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
 					vTaskDelay(100);
 				} else if (7 == pDataReciveedUart[0]) {
@@ -251,13 +251,13 @@ void uart_event_task(void *pvParameters) {
 					Data[0] = 'H';
 					Data[1] = 'Z';
 					memcpy(&Data[2], BleReadDataClient, 18);
-					uart_write_bytes(EX_UART_NUM, (const char*) Data, 20);
+					uart_write_bytes(EX_UART_NUM, (const char*) Data, 22);
 					memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
 					memset(BleReadDataClient, 0, sizeof(BleReadDataClient));
 					memset(Data, 0, sizeof(Data));
 					vTaskDelay(50);
 					Data[0] = 1;
-					uart_write_bytes(EX_UART_NUM, (const char*) Data, 20);
+					uart_write_bytes(EX_UART_NUM, (const char*) Data, 22);
 					vTaskDelay(100);
 				}
 
