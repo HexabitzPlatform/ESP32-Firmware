@@ -32,6 +32,8 @@
 #include "esp_bt.h"
 #include "blecent.h"
 #include "bleprph.h"
+
+#include "Station_WiFi_AP_Driver.h"
 /* peripheral */
 #include "driver/uart.h"
 #include "driver/gpio.h"
