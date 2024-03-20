@@ -291,6 +291,10 @@ void app_main(void) {
 
 	ble_uart_init();
 	nimble_port_init();
+	WiFi_init();
+
+
+
 
 }
 

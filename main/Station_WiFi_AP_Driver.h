@@ -70,7 +70,6 @@ int socket_send(const char *tag, const int sock, const char * data, const size_t
 char* get_clients_address(struct sockaddr_storage *source_addr);
 void tcp_server_task_NONBlocking(void *pvParameters);
 
-
 /***************Bracelet Function***************/
 void WiFi_init(void);
 

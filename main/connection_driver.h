@@ -59,7 +59,7 @@ void check_con(void);
 //void connection_mode(void);
 /***********************SOFT AP WIFI**********************/
 #define EXAMPLE_ESP_WIFI_SSID      "Hexabiz_wifi"
-#define EXAMPLE_ESP_WIFI_PASS      "Hexabiz_wifi"
+#define EXAMPLE_ESP_WIFI_PASS      "00000000"
 #define EXAMPLE_ESP_WIFI_CHANNEL   1
 #define EXAMPLE_MAX_STA_CONN       4
 
