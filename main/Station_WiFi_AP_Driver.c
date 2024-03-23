@@ -19,6 +19,9 @@
 #include "esp_event.h"
 #include "esp_log.h"
 #include "nvs_flash.h"
+#include "connection_driver.h"
+
+
 // void WiFi_init(void)
 // {
 //     // Initialize NVS
@@ -48,7 +51,9 @@
 
 // }
 
-
+extern uint8_t wififlag ;
+extern char WifiData[100];
+extern uint8_t Data[22];
  uint8_t pData[52000];
 void WiFi_init(void)
 {
@@ -378,6 +383,8 @@ void tcp_server_task_NONBlocking(void *pvParameters)
                     log_socket_error(TAG, sock[new_sock_index], errno, "Unable to set socket non blocking");
                     goto error;
                 }
+        		Data[0] = 1;
+        				uart_write_bytes(UART_PORT_x, (const char*) Data, 22);
                 ESP_LOGI(TAG, "[sock=%d]: Socket marked as non blocking", sock[new_sock_index]);
             }
         }
@@ -385,7 +392,6 @@ void tcp_server_task_NONBlocking(void *pvParameters)
         // We serve all the connected clients in this loop
         for (int i=0; i<max_socks; ++i) {
             if (sock[i] != INVALID_SOCK) {
-
                 // This is an open socket -> try to serve it
                 int len = try_receive(TAG, sock[i], rx_buffer, sizeof(rx_buffer));
                 if (len < 0) {
@@ -393,12 +399,16 @@ void tcp_server_task_NONBlocking(void *pvParameters)
                     ESP_LOGI(TAG, "[sock=%d]: try_receive() returned %d -> closing the socket", sock[i], len);
                     close(sock[i]);
                     sock[i] = INVALID_SOCK;
-                } else if (len > 0) {
+                } else if (wififlag==1) {
+                	ESP_LOGI("eeeee","11111");
 
 //                    soucket_mode =RECIVE_MODE;
                     // Received some data -> echo back
+                	int s=strlen(WifiData);
                     ESP_LOGI(TAG, "[sock=%d]: Received %.*s", sock[i], len, rx_buffer);
-                    len = socket_send(TAG, sock[i], rx_buffer, len);
+                    len = socket_send(TAG, sock[i], WifiData, s);
+                    ESP_LOGI(TAG, "[sock=%d]: Written %.*s", sock[i], len, WifiData);
+
                     if (len < 0) {
                         // Error occurred on write to this socket -> close it and mark invalid
                         ESP_LOGI(TAG, "[sock=%d]: socket_send() returned %d -> closing the socket", sock[i], len);
@@ -408,6 +418,11 @@ void tcp_server_task_NONBlocking(void *pvParameters)
                         // Successfully echoed to this socket
                         ESP_LOGI(TAG, "[sock=%d]: Written %.*s", sock[i], len, rx_buffer);
                     }
+
+                wififlag = 0;
+				vTaskDelay(100);
+				Data[0] = 1;
+				uart_write_bytes(UART_PORT_x, (const char*) Data, 22);
                 }
                 // uint8_t pData[1024];
                 // uint16_t Size = 1024;

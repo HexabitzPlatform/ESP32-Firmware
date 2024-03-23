@@ -95,7 +95,8 @@ char clent_name[50];
 char server_name[50];
 uint8_t pDataReciveedUart[512] = { 0 };
 uint8_t BleReadDataClient[20];
-
+uint8_t wififlag ;
+char WifiData[100];
 static void ble_uart_init(void) {
 	esp_log_level_set("uart_events", ESP_LOG_INFO);
 
@@ -240,7 +241,7 @@ void uart_event_task(void *pvParameters) {
 					memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
 
 				} else if (6 == pDataReciveedUart[0]) {
-					uint8_t BleClientBuffer[18];
+					uint8_t BleClientBuffer[20];
 					memcpy(BleClientBuffer, &pDataReciveedUart[2],
 							pDataReciveedUart[1]);
 					write_data(BleClientBuffer);
@@ -261,6 +262,21 @@ void uart_event_task(void *pvParameters) {
 					Data[0] = 1;
 					uart_write_bytes(EX_UART_NUM, (const char*) Data, 22);
 					vTaskDelay(100);
+				} else if (8 == pDataReciveedUart[0]) {
+					memcpy(ssid, &pDataReciveedUart[3], pDataReciveedUart[1]);
+					memcpy(password,
+							&pDataReciveedUart[3 + pDataReciveedUart[1]],
+							pDataReciveedUart[2]);
+					ESP_LOGI("ssid", " : %s", ssid);
+					ESP_LOGI("password", " : %s", password);
+					WiFi_init();
+					memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
+				}
+				else if (9 == pDataReciveedUart[0]) {
+					memcpy(WifiData, &pDataReciveedUart[2],
+							pDataReciveedUart[1]);
+					wififlag = 1;
+					memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
 				}
 
 				break;
@@ -276,6 +292,9 @@ void uart_event_task(void *pvParameters) {
 }
 
 int rc;
+
+
+int rr ;
 void app_main(void) {
 
 	/* Initialize NVS — it is used to store PHY calibration data */
@@ -291,10 +310,16 @@ void app_main(void) {
 
 	ble_uart_init();
 	nimble_port_init();
-	WiFi_init();
-
-
-
-
+//	WiFi_init();
+//while(1)
+//{
+//	rr++;
+//	WifiData[0]='a';
+//	WifiData[1]='w';
+//	WifiData[2]=0x05;
+//	WifiData[3]=4;
+//	vTaskDelay(100);
+//	wififlag=1;
+//}
 }
 

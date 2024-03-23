@@ -73,10 +73,11 @@ ESP_ERROR_CHECK(
 			&wifi_event_handler, NULL, NULL));
 ESP_LOGI("w", "5");
 wifi_config_t wifi_config = { .ap = {
-        .ssid = EXAMPLE_ESP_WIFI_SSID,
-	.ssid_len = strlen(ssid), .channel = EXAMPLE_ESP_WIFI_CHANNEL,
-        .password = EXAMPLE_ESP_WIFI_PASS,
-	.max_connection = EXAMPLE_MAX_STA_CONN,
+//         .ssid = EXAMPLE_ESP_WIFI_SSID,
+	     .ssid_len = strlen(ssid),
+        	.channel = EXAMPLE_ESP_WIFI_CHANNEL,
+//         .password = EXAMPLE_ESP_WIFI_PASS,
+	     .max_connection = EXAMPLE_MAX_STA_CONN,
 #ifdef CONFIG_ESP_WIFI_SOFTAP_SAE_SUPPORT
         .authmode = WIFI_AUTH_WPA_WPA2_PSK,
         .sae_pwe_h2e = WPA3_SAE_PWE_BOTH,
@@ -84,9 +85,9 @@ wifi_config_t wifi_config = { .ap = {
 	.authmode = WIFI_AUTH_WPA2_PSK,
 #endif
 	.pmf_cfg = { .required = true, }, }, };
-//
-//strncpy((char*) wifi_config.sta.ssid, (char*) &ssid[0], 32);
-//strncpy((char*) wifi_config.sta.password, (char*) &password[0], 64);
+
+strncpy((char*) wifi_config.sta.ssid, (char*) &ssid[0], 32);
+strncpy((char*) wifi_config.sta.password, (char*) &password[0], 64);
 ESP_LOGI("w", "6");
 if (strlen(EXAMPLE_ESP_WIFI_PASS) == 0) {
 wifi_config.ap.authmode = WIFI_AUTH_OPEN;
