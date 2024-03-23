@@ -97,6 +97,7 @@ uint8_t pDataReciveedUart[512] = { 0 };
 uint8_t BleReadDataClient[20];
 uint8_t wififlag ;
 char WifiData[100];
+
 static void ble_uart_init(void) {
 	esp_log_level_set("uart_events", ESP_LOG_INFO);
 

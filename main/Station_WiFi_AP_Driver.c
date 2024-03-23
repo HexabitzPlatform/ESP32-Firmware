@@ -55,6 +55,7 @@ extern uint8_t wififlag ;
 extern char WifiData[100];
 extern uint8_t Data[22];
  uint8_t pData[52000];
+ char WIFIBUF[128];
 void WiFi_init(void)
 {
     // Initialize NVS
@@ -361,97 +362,122 @@ void tcp_server_task_NONBlocking(void *pvParameters)
         }
 
         // We accept a new connection only if we have a free socket
-        if (new_sock_index < max_socks) {
-            // Try to accept a new connections
-            sock[new_sock_index] = accept(listen_sock, (struct sockaddr *)&source_addr, &addr_len);
+		if (new_sock_index < max_socks) {
+			// Try to accept a new connections
+			sock[new_sock_index] = accept(listen_sock,
+					(struct sockaddr*) &source_addr, &addr_len);
 
-            if (sock[new_sock_index] < 0) {
-                if (errno == EWOULDBLOCK) { // The listener socket did not accepts any connection
-                                            // continue to serve open connections and try to accept again upon the next iteration
-                    ESP_LOGV(TAG, "No pending connections...");
-                } else {
-                    log_socket_error(TAG, listen_sock, errno, "Error when accepting connection");
-                    goto error;
-                }
-            } else {
-                // We have a new client connected -> print it's address
-                ESP_LOGI(TAG, "[sock=%d]: Connection accepted from IP:%s", sock[new_sock_index], get_clients_address(&source_addr));
+			if (sock[new_sock_index] < 0) {
+				if (errno == EWOULDBLOCK) { // The listener socket did not accepts any connection
+											// continue to serve open connections and try to accept again upon the next iteration
+					ESP_LOGV(TAG, "No pending connections...");
+				} else {
+					log_socket_error(TAG, listen_sock, errno,
+							"Error when accepting connection");
+					goto error;
+				}
+			} else {
+				// We have a new client connected -> print it's address
+				ESP_LOGI(TAG, "[sock=%d]: Connection accepted from IP:%s",
+						sock[new_sock_index],
+						get_clients_address(&source_addr));
 
-                // ...and set the client's socket non-blocking
-                flags = fcntl(sock[new_sock_index], F_GETFL);
-                if (fcntl(sock[new_sock_index], F_SETFL, flags | O_NONBLOCK) == -1) {
-                    log_socket_error(TAG, sock[new_sock_index], errno, "Unable to set socket non blocking");
-                    goto error;
-                }
-        		Data[0] = 1;
-        				uart_write_bytes(UART_PORT_x, (const char*) Data, 22);
-                ESP_LOGI(TAG, "[sock=%d]: Socket marked as non blocking", sock[new_sock_index]);
-            }
-        }
+				// ...and set the client's socket non-blocking
+				flags = fcntl(sock[new_sock_index], F_GETFL);
+				if (fcntl(sock[new_sock_index], F_SETFL, flags | O_NONBLOCK)
+						== -1) {
+					log_socket_error(TAG, sock[new_sock_index], errno,
+							"Unable to set socket non blocking");
+					goto error;
+				}
+				WIFIBUF[0] = 1;
+				uart_write_bytes(UART_PORT_x, (const char*) WIFIBUF, 128);
+				ESP_LOGI(TAG, "[sock=%d]: Socket marked as non blocking",
+						sock[new_sock_index]);
+			}
+		}
 //        soucket_mode = READY;
         // We serve all the connected clients in this loop
-        for (int i=0; i<max_socks; ++i) {
-            if (sock[i] != INVALID_SOCK) {
-                // This is an open socket -> try to serve it
-                int len = try_receive(TAG, sock[i], rx_buffer, sizeof(rx_buffer));
-                if (len < 0) {
-                    // Error occurred within this client's socket -> close and mark invalid
-                    ESP_LOGI(TAG, "[sock=%d]: try_receive() returned %d -> closing the socket", sock[i], len);
-                    close(sock[i]);
-                    sock[i] = INVALID_SOCK;
-                } else if (wififlag==1) {
-                	ESP_LOGI("eeeee","11111");
+		for (int i = 0; i < max_socks; ++i) {
+			if (sock[i] != INVALID_SOCK) {
+				// This is an open socket -> try to serve it
+				int len = try_receive(TAG, sock[i], rx_buffer,
+						sizeof(rx_buffer));
+				if (len < 0) {
+					// Error occurred within this client's socket -> close and mark invalid
+					ESP_LOGI(TAG,
+							"[sock=%d]: try_receive() returned %d -> closing the socket",
+							sock[i], len);
+					close(sock[i]);
+					sock[i] = INVALID_SOCK;
+				} else if (len > 0) {
+					WIFIBUF[0] = 'H';
+					WIFIBUF[1] = 'Z';
+					int c = strlen(rx_buffer);
+					memcpy(&WIFIBUF[2], rx_buffer, c);
+					uart_write_bytes(EX_UART_NUM, (const char*) WIFIBUF, 128);
+
+					memset(WIFIBUF, 0, sizeof(WIFIBUF));
+					memset(rx_buffer, 0, sizeof(rx_buffer));
+
+				} else if (wififlag == 1) {
 
 //                    soucket_mode =RECIVE_MODE;
-                    // Received some data -> echo back
-                	int s=strlen(WifiData);
-                    ESP_LOGI(TAG, "[sock=%d]: Received %.*s", sock[i], len, rx_buffer);
-                    len = socket_send(TAG, sock[i], WifiData, s);
-                    ESP_LOGI(TAG, "[sock=%d]: Written %.*s", sock[i], len, WifiData);
+					// Received some data -> echo back
+					int s = strlen(WifiData);
+					ESP_LOGI(TAG, "[sock=%d]: Received %.*s", sock[i], len,
+							rx_buffer);
+					len = socket_send(TAG, sock[i], WifiData, s);
+					ESP_LOGI(TAG, "[sock=%d]: Written %.*s", sock[i], len,
+							WifiData);
 
-                    if (len < 0) {
-                        // Error occurred on write to this socket -> close it and mark invalid
-                        ESP_LOGI(TAG, "[sock=%d]: socket_send() returned %d -> closing the socket", sock[i], len);
-                        close(sock[i]);
-                        sock[i] = INVALID_SOCK;
-                    } else {
-                        // Successfully echoed to this socket
-                        ESP_LOGI(TAG, "[sock=%d]: Written %.*s", sock[i], len, rx_buffer);
-                    }
+					if (len < 0) {
+						// Error occurred on write to this socket -> close it and mark invalid
+						ESP_LOGI(TAG,
+								"[sock=%d]: socket_send() returned %d -> closing the socket",
+								sock[i], len);
+						close(sock[i]);
+						sock[i] = INVALID_SOCK;
+					} else {
+						// Successfully echoed to this socket
+						ESP_LOGI(TAG, "[sock=%d]: Written %.*s", sock[i], len,
+								rx_buffer);
+					}
 
-                wififlag = 0;
-				vTaskDelay(100);
-				Data[0] = 1;
-				uart_write_bytes(UART_PORT_x, (const char*) Data, 22);
-                }
-                // uint8_t pData[1024];
-                // uint16_t Size = 1024;
-                // uint8_t numOfByteRead;
-                // uint32_t dTimeout=10;
-                // ReceiveUART1(pData, Size, &numOfByteRead, dTimeout);
-               
+					wififlag = 0;
+					vTaskDelay(100);
+					WIFIBUF[0] = 1;
+					uart_write_bytes(UART_PORT_x, (const char*) WIFIBUF, 128);
+				}
+				// uint8_t pData[1024];
+				// uint16_t Size = 1024;
+				// uint8_t numOfByteRead;
+				// uint32_t dTimeout=10;
+				// ReceiveUART1(pData, Size, &numOfByteRead, dTimeout);
 
-                // if(numOfByteRead>0)
-                if(strlen((char *)pData)>= 50400)
-                {
-                    //  ESP_LOGI("SOUCKET WELL SEND : "," num of byte recived = %d \n",numOfByteRead);
-                    ESP_LOGI("SOUCKET WELL SEND : "," num of byte recived = %d \n",50400);
-                    // len = socket_send(TAG, sock[i], (char*) pData, numOfByteRead);
-                    len = socket_send(TAG, sock[i], (char*) pData, 50400);
-                    if (len < 0) {
-                        // Error occurred on write to this socket -> close it and mark invalid
-                        ESP_LOGI(TAG, "[sock=%d]: socket_send() returned %d -> closing the socket", sock[i], len);
-                        close(sock[i]);
-                        sock[i] = INVALID_SOCK;
-                    } else {
-                        // Successfully echoed to this socket
-                        ESP_LOGI(TAG, "[sock=%d]: Written %.*s", sock[i], len, (char*) pData);
-                    }
-                }
+				// if(numOfByteRead>0)
+				if (strlen((char*) pData) >= 50400) {
+					//  ESP_LOGI("SOUCKET WELL SEND : "," num of byte recived = %d \n",numOfByteRead);
+					ESP_LOGI("SOUCKET WELL SEND : ",
+							" num of byte recived = %d \n", 50400);
+					// len = socket_send(TAG, sock[i], (char*) pData, numOfByteRead);
+					len = socket_send(TAG, sock[i], (char*) pData, 50400);
+					if (len < 0) {
+						// Error occurred on write to this socket -> close it and mark invalid
+						ESP_LOGI(TAG,
+								"[sock=%d]: socket_send() returned %d -> closing the socket",
+								sock[i], len);
+						close(sock[i]);
+						sock[i] = INVALID_SOCK;
+					} else {
+						// Successfully echoed to this socket
+						ESP_LOGI(TAG, "[sock=%d]: Written %.*s", sock[i], len,
+								(char* ) pData);
+					}
+				}
 
-
-            } // one client's socket
-        } // for all sockets
+			} // one client's socket
+		} // for all sockets
 
         // Yield to other tasks
         vTaskDelay(pdMS_TO_TICKS(YIELD_TO_ALL_MS));
