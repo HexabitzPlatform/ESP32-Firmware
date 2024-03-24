@@ -291,11 +291,7 @@ void uart_event_task(void *pvParameters) {
 	vTaskDelete(NULL);
 
 }
-
 int rc;
-
-
-int rr ;
 void app_main(void) {
 
 	/* Initialize NVS — it is used to store PHY calibration data */
@@ -311,16 +307,6 @@ void app_main(void) {
 
 	ble_uart_init();
 	nimble_port_init();
-//	WiFi_init();
-//while(1)
-//{
-//	rr++;
-//	WifiData[0]='a';
-//	WifiData[1]='w';
-//	WifiData[2]=0x05;
-//	WifiData[3]=4;
-//	vTaskDelay(100);
-//	wififlag=1;
-//}
+
 }
 
