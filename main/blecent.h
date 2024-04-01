@@ -20,6 +20,22 @@
 #ifndef H_BLECENT_
 #define H_BLECENT_
 
+#include "esp_nimble_hci.h"
+#include "nimble/nimble_port.h"
+#include "nimble/nimble_port_freertos.h"
+#include "host/ble_hs.h"
+#include "host/util/util.h"
+#include "console/console.h"
+#include "services/gap/ble_svc_gap.h"
+#include "esp_bt.h"
+#include "blecent.h"
+#include "bleprph.h"
+
+#include "driver/uart.h"
+#include "driver/gpio.h"
+#include "driver/spi_slave.h"
+#include "freertos/task.h"
+#include "connection_driver.h"
 #include "modlog/modlog.h"
 #ifdef __cplusplus
 extern "C" {
@@ -72,6 +88,9 @@ void print_conn_desc(const struct ble_gap_conn_desc *desc);
 void print_adv_fields(const struct ble_hs_adv_fields *fields);
 void ext_print_adv_report(const void *param);
 
+void BLECLient(char* clientname) ;
+int read_data();
+int write_data(uint8_t *data);
 /** Peer. */
 struct peer_dsc {
     SLIST_ENTRY(peer_dsc) next;

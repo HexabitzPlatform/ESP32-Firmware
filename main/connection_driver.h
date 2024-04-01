@@ -22,6 +22,7 @@
 #include "esp_log.h"
 #include "nvs_flash.h"
 #include "driver/gpio.h"
+#include "driver/uart.h"
 #include "driver/spi_master.h"
 #include "esp_eth.h"
 #include "esp_mac.h"
@@ -59,13 +60,14 @@ void check_con(void);
 //void connection_mode(void);
 /***********************SOFT AP WIFI**********************/
 #define EXAMPLE_ESP_WIFI_SSID      "Hexabiz_wifi"
-#define EXAMPLE_ESP_WIFI_PASS      "Hexabiz_wifi"
+#define EXAMPLE_ESP_WIFI_PASS      "00000000"
 #define EXAMPLE_ESP_WIFI_CHANNEL   1
 #define EXAMPLE_MAX_STA_CONN       4
 
 /******************************************************/
 #define UART_PORT_x UART_NUM_0
 #define EX_UART_NUM UART_NUM_0
+
 
 /***********************STACTION WIFI**********************/
 

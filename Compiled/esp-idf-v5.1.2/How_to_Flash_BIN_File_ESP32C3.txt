@@ -1,0 +1,3 @@
+bootloader               0x0000
+ESP32_FW                 0x10000
+partition-table          0x8000

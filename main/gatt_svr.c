@@ -30,7 +30,7 @@
 #include "connection_driver.h"
 /*** Maximum number of characteristics with the notify flag ***/
 #define MAX_NOTIFY 5
-uint8_t Data[20];
+uint8_t Data[22];
 uint8_t BleBuffer[20]={0};
 uint8_t BleReadBuffer[20]={0};
 uint16_t ble_svc_gatt_read_val_handle, ble_spp_svc_gatt_read_val_handle, ble_spp_svc_gatt_write_val_handle;
@@ -51,23 +51,41 @@ ble_uuid128_t char2 =
         .u.type = BLE_UUID_TYPE_128,
         .value = {0xe2, 0xa2, 0xe5, 0x9c, 0x72, 0x24, 0xa7, 0x99, 0xc6, 0x46, 0x50, 0x69, 0x11, 0x65, 0xa7, 0xb8}};
 
+//
+//static const ble_uuid128_t gatt_svr_svc_uuid =
+//    BLE_UUID128_INIT(0x2d, 0x71, 0xa2, 0x59, 0xb4, 0x58, 0xc8, 0x12,
+//                     0x99, 0x99, 0x43, 0x95, 0x12, 0x2f, 0x46, 0x59);
+//
+///* A characteristic that can be subscribed to */
+//static uint8_t gatt_svr_chr_val;
+//static uint16_t gatt_svr_chr_val_handle;
+//static const ble_uuid128_t gatt_svr_chr_uuid =
+//    BLE_UUID128_INIT(0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11,
+//                     0x22, 0x22, 0x22, 0x22, 0x33, 0x33, 0x33, 0x33);
+//
+///* A custom descriptor */
+//static uint8_t gatt_svr_dsc_val;
+//static const ble_uuid128_t gatt_svr_dsc_uuid =
+//    BLE_UUID128_INIT(0x01, 0x01, 0x01, 0x01, 0x12, 0x12, 0x12, 0x12,
+//                     0x23, 0x23, 0x23, 0x23, 0x34, 0x34, 0x34, 0x34);
+
 
 static const ble_uuid128_t gatt_svr_svc_uuid =
-    BLE_UUID128_INIT(0x2d, 0x71, 0xa2, 0x59, 0xb4, 0x58, 0xc8, 0x12,
-                     0x99, 0x99, 0x43, 0x95, 0x12, 0x2f, 0x46, 0x59);
+    BLE_UUID128_INIT(0x90, 0x89, 0x81, 0x40, 0xec, 0xc4, 0x96, 0xb7,
+            0xed, 0x45, 0x63, 0xcc, 0x1d, 0x46, 0xdb, 0xf9);
 
 /* A characteristic that can be subscribed to */
 static uint8_t gatt_svr_chr_val;
 static uint16_t gatt_svr_chr_val_handle;
 static const ble_uuid128_t gatt_svr_chr_uuid =
-    BLE_UUID128_INIT(0x00, 0x00, 0x00, 0x00, 0x11, 0x11, 0x11, 0x11,
-                     0x22, 0x22, 0x22, 0x22, 0x33, 0x33, 0x33, 0x33);
+    BLE_UUID128_INIT(0xe2, 0xa2, 0xe5, 0x9c, 0x72, 0x24, 0xa7, 0x99,
+            0xc6, 0x46, 0x50, 0x69, 0x11, 0x65, 0xa7, 0xb8);
 
 /* A custom descriptor */
 static uint8_t gatt_svr_dsc_val;
 static const ble_uuid128_t gatt_svr_dsc_uuid =
-    BLE_UUID128_INIT(0x01, 0x01, 0x01, 0x01, 0x12, 0x12, 0x12, 0x12,
-                     0x23, 0x23, 0x23, 0x23, 0x34, 0x34, 0x34, 0x34);
+    BLE_UUID128_INIT(0x79, 0x24, 0x39, 0xf7, 0x54, 0xe5, 0xce, 0x8a,
+            0x8a, 0x44, 0x4a, 0xe0, 0xf3, 0x90, 0x22, 0x97);
 
 static int
 gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
@@ -193,7 +211,7 @@ static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
                 BLE_GATT_CHR_F_READ_ENC | BLE_GATT_CHR_F_WRITE_ENC |
                 BLE_GATT_CHR_F_NOTIFY | BLE_GATT_CHR_F_INDICATE,
 #else
-                .flags = BLE_GATT_CHR_F_READ | BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_NOTIFY | BLE_GATT_CHR_F_INDICATE,
+                .flags =  BLE_GATT_CHR_F_READ |BLE_GATT_CHR_F_WRITE | BLE_GATT_CHR_F_NOTIFY | BLE_GATT_CHR_F_INDICATE,
 #endif
                 .val_handle = &gatt_svr_chr_val_handle,
                 .descriptors = (struct ble_gatt_dsc_def[])
@@ -202,7 +220,7 @@ static const struct ble_gatt_svc_def gatt_svr_svcs[] = {
 #if CONFIG_EXAMPLE_ENCRYPTION
                       .att_flags = BLE_ATT_F_READ | BLE_ATT_F_READ_ENC,
 #else
-                      .att_flags = BLE_ATT_F_READ,
+                      .att_flags =  BLE_ATT_F_READ,
 #endif
                       .access_cb = gatt_svc_access,
                     }, {
@@ -251,7 +269,6 @@ gatt_svr_write(struct os_mbuf *om, uint16_t min_len, uint16_t max_len,
  *     Append the value to ctxt->om if the operation is READ
  *     Write ctxt->om to the value if the operation is WRITE
  **/
-
 static int
 gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
                 struct ble_gatt_access_ctxt *ctxt, void *arg)
@@ -277,8 +294,8 @@ gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
 //                                sizeof(gatt_svr_chr_val));
 			rc = os_mbuf_append(ctxt->om, BleReadBuffer,
 					strlen((const char*) BleReadBuffer));
-			Data[0]=1;
-			uart_write_bytes(EX_UART_NUM, (const char*) Data, 20);
+			Data[0] = 1;
+			uart_write_bytes(EX_UART_NUM, (const char*) Data, 22);
 			memset(BleReadBuffer, 0, sizeof(BleReadBuffer));
 			memset(Data, 0, sizeof(Data));
 			return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
@@ -297,11 +314,11 @@ gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
 		}
 		uuid = ctxt->chr->uuid;
 		if (attr_handle == gatt_svr_chr_val_handle) {
-			rc = gatt_svr_write(ctxt->om, 0, 18, BleBuffer, 0);
+			rc = gatt_svr_write(ctxt->om, 0, 20, BleBuffer, 0);
 			Data[0] = 'H';
 			Data[1] = 'Z';
-			memcpy(&Data[2], BleBuffer, 18);
-			uart_write_bytes(EX_UART_NUM, (const char*) Data, 20);
+			memcpy(&Data[2], BleBuffer, 20);
+			uart_write_bytes(EX_UART_NUM, (const char*) Data, 22);
 
 			memset(Data, 0, sizeof(Data));
 			memset(BleBuffer, 0, sizeof(BleBuffer));
