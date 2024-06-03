@@ -76,6 +76,7 @@ uint8_t num = 1;
 char recvbuf[129] = { 0 };
 char tranbuf[129] = { 0 };
 char dummy[129] = { 0 };
+uint8_t sizeread;
 spi_slave_transaction_t t;
 uint16_t read_handle;
 void spi_init();
@@ -239,6 +240,7 @@ void uart_event_task(void *pvParameters) {
 				} else if (5 == pDataReciveedUart[0]) {
 					memcpy(BleReadBuffer, &pDataReciveedUart[2],
 							pDataReciveedUart[1]);
+					sizeread=pDataReciveedUart[1];
 					memset(pDataReciveedUart, 0, sizeof(pDataReciveedUart));
 
 				} else if (6 == pDataReciveedUart[0]) {

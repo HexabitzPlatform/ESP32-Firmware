@@ -30,6 +30,7 @@
 #include "connection_driver.h"
 /*** Maximum number of characteristics with the notify flag ***/
 #define MAX_NOTIFY 5
+extern uint8_t sizeread;
 uint8_t Data[22];
 uint8_t BleBuffer[20]={0};
 uint8_t BleReadBuffer[20]={0};
@@ -293,7 +294,7 @@ gatt_svc_access(uint16_t conn_handle, uint16_t attr_handle,
 //                                &gatt_svr_chr_val,
 //                                sizeof(gatt_svr_chr_val));
 			rc = os_mbuf_append(ctxt->om, BleReadBuffer,
-					strlen((const char*) BleReadBuffer));
+					sizeread);
 			Data[0] = 1;
 			uart_write_bytes(EX_UART_NUM, (const char*) Data, 22);
 			memset(BleReadBuffer, 0, sizeof(BleReadBuffer));
